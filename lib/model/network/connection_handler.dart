@@ -16,7 +16,7 @@ class ConnectionHandler {
   ConnectionHandler({required this.handleMessage});
 
   Future<void> initialize() async {
-    _group = InternetAddress(NetworkConfig.groupAddr);
+    _group = InternetAddress(NetworkConfig.groupAddress);
     _multicastSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,
         NetworkConfig.port, reuseAddress: true);
     _unicastSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,

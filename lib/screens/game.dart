@@ -9,7 +9,7 @@ import '../controller/engine.dart';
 import '../model/proto/snake.pb.dart';
 
 class Game extends StatelessWidget {
-  Game({super.key, required this.engine, required this.config});
+  const Game({super.key, required this.engine, required this.config});
 
   final Engine engine;
   final GameConfig config;

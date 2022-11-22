@@ -1,5 +1,6 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:snake_online/components/button.dart';
 import 'package:snake_online/components/games_list/available_games_list.dart';
 
@@ -47,30 +48,38 @@ class MainMenu extends StatelessWidget {
                     Container(),
                     Container(),
                     Container(),
-                    Button(
-                        text: "New game",
-                        onTap: () {
-                          var config = GameConfig(width: 30, height: 20,
-                          stateDelayMs: 250, foodStatic: 30);
-                          var player = GamePlayer(name: "aiwannafly", id: 1, role: NodeRole.MASTER);
-                          var engine = EngineMaster(config: config, player: player);
-                          Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (context) => Game(engine: engine, config: config,)));
+                    Column(
+                      children: [
+                        Button(
+                            text: "New game",
+                            onTap: () => _startNewGame(context)
+                        ),
+                        const SizedBox(height: Config.margin,),
+                        Button(text: "Exit", onTap: () {
+                          exit(0);
                         }),
+                      ],
+                    ),
                     Container(),
                   ],
                 ),
-                const SizedBox(width: Config.maxWidth / 5,),
+                SizedBox(width: Config.pageWidth(context) / 5,),
                 const Center(child: GamesList())
               ],
             ),
           ],
         ),
-        // const SizedBox(height: Config.margin,),
-        // Button(text: "Выйти из игры", onTap: () {
-        // }),
       ),
     );
+  }
+
+  void _startNewGame(BuildContext context) {
+    var config = GameConfig(width: 30, height: 20,
+        stateDelayMs: 250, foodStatic: 30);
+    var player = GamePlayer(name: "aiwannafly", id: 1, role: NodeRole.MASTER);
+    var engine = EngineMaster(config: config, player: player);
+    Navigator.of(context).push(
+        MaterialPageRoute(
+            builder: (context) => Game(engine: engine, config: config,)));
   }
 }

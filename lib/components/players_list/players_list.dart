@@ -31,29 +31,31 @@ class PlayersListState extends State<PlayersList> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(Config.padding),
-      child: Column(
-        children: [
-          Container(
-            width: 400,
-            decoration: BoxDecoration(
-              // color: Colors.white,
-              borderRadius: BorderRadius.circular(Config.borderRadius)
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            Container(
+              width: Config.pageWidth(context) / 4,
+              decoration: BoxDecoration(
+                // color: Colors.white,
+                borderRadius: BorderRadius.circular(Config.borderRadius)
+              ),
+              padding: const EdgeInsets.all(Config.padding),
+              child: const Text(
+                "Players list",
+                style: TextStyle(
+                    fontFamily: Config.fontFamily,
+                    fontSize: 20,
+                    color: Colors.white),
+              ),
             ),
-            padding: const EdgeInsets.all(Config.padding),
-            child: const Text(
-              "Players list",
-              style: TextStyle(
-                  fontFamily: Config.fontFamily,
-                  fontSize: 20,
-                  color: Colors.white),
+            Column(
+              children: _currentPlayers
+                  .map((e) => PlayerListTile(gamePlayer: e))
+                  .toList(),
             ),
-          ),
-          Column(
-            children: _currentPlayers
-                .map((e) => PlayerListTile(gamePlayer: e))
-                .toList(),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

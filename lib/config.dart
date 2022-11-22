@@ -17,6 +17,6 @@ class Config {
   }
 
   static double pageWidth(BuildContext context) {
-    return min(maxWidth, MediaQuery.of(context).size.width);
+    return MediaQuery.of(context).size.width;
   }
 }

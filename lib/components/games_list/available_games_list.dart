@@ -49,71 +49,74 @@ class GamesListState extends State<GamesList> {
           color: Colors.blueGrey.shade900.withOpacity(0.9)),
       margin: const EdgeInsets.all(Config.padding),
       padding: const EdgeInsets.all(Config.padding),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            children: [
-              Container(
-                width: 300,
-                decoration: BoxDecoration(color: Colors.blueGrey.shade700),
-                padding: const EdgeInsets.all(Config.padding),
-                child: const Text(
-                  "Available games",
-                  style: TextStyle(
-                      fontFamily: Config.fontFamily,
-                      fontSize: 20,
-                      color: Colors.white),
+      height: Config.pageHeight(context) * 0.8,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              children: [
+                Container(
+                  width: Config.pageWidth(context) / 4,
+                  decoration: BoxDecoration(color: Colors.blueGrey.shade700),
+                  padding: const EdgeInsets.all(Config.padding),
+                  child: const Text(
+                    "Available games",
+                    style: TextStyle(
+                        fontFamily: Config.fontFamily,
+                        fontSize: 20,
+                        color: Colors.white),
+                  ),
                 ),
-              ),
-              Column(
-                children: _currentGames
-                    .map((e) => GameListTile(
-                  gameAnnouncement: e,
-                  onTap: (gameAnnouncement) {
-                    setState(() {
-                      _chosenGame = gameAnnouncement;
-                    });
-                  },
-                )).toList(),
-              ),
-            ],
-          ),
-          _chosenGame != null
-              ? Button(
-            text: "Join ${_chosenGame!.gameName}",
-            onTap: () {
-              var name = _chosenGame!.gameName;
-              var masterAddress = _gameNames[name]!.address;
-              var masterPort = _gameNames[name]!.port;
-              MessageHandler().sendJoin(
-                  address: masterAddress,
-                  port: masterPort,
-                  gameName: name,
-                  playerName: "winner${Random().nextInt(1000)}",
-                  requestedRole: NodeRole.NORMAL
-              );
-              debugPrint('send join to ${_gameNames[name]!.address.address} :'
-                  '${_gameNames[name]!.port}');
-              MessageHandler().ackMessages.stream.listen((event) {
-                if (event.address != masterAddress || event.port != masterPort) return;
-                int playerId = event.gameMessage.receiverId;
-                var config = _gameConfigs[name]!;
-                var engine = EngineNormal(
-                    config: config,
-                    masterAddress: masterAddress,
-                    masterPort: masterPort
+                Column(
+                  children: _currentGames
+                      .map((e) => GameListTile(
+                    gameAnnouncement: e,
+                    onTap: (gameAnnouncement) {
+                      setState(() {
+                        _chosenGame = gameAnnouncement;
+                      });
+                    },
+                  )).toList(),
+                ),
+              ],
+            ),
+            _chosenGame != null
+                ? Button(
+              text: "Join ${_chosenGame!.gameName}",
+              onTap: () {
+                var name = _chosenGame!.gameName;
+                var masterAddress = _gameNames[name]!.address;
+                var masterPort = _gameNames[name]!.port;
+                MessageHandler().sendJoin(
+                    address: masterAddress,
+                    port: masterPort,
+                    gameName: name,
+                    playerName: "winner${Random().nextInt(1000)}",
+                    requestedRole: NodeRole.NORMAL
                 );
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => Game(
-                      engine: engine,
+                debugPrint('send join to ${_gameNames[name]!.address.address} :'
+                    '${_gameNames[name]!.port}');
+                MessageHandler().ackMessages.stream.listen((event) {
+                  if (event.address != masterAddress || event.port != masterPort) return;
+                  int playerId = event.gameMessage.receiverId;
+                  var config = _gameConfigs[name]!;
+                  var engine = EngineNormal(
                       config: config,
-                    )));
-              });
-            },
-          )
-              : Container()
-        ],
+                      masterAddress: masterAddress,
+                      masterPort: masterPort
+                  );
+                  Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => Game(
+                        engine: engine,
+                        config: config,
+                      )));
+                });
+              },
+            )
+                : Container()
+          ],
+        ),
       ),
     );
   }

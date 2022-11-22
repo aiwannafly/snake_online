@@ -33,7 +33,7 @@ class _GameListTileState extends State<GameListTile> {
           ),
           color: !_hovered ? Colors.blueGrey : Colors.blueGrey.shade700,
         ),
-        width: 300,
+        width: Config.pageWidth(context) / 4,
         padding: const EdgeInsets.all(Config.padding),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,

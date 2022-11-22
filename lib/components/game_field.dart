@@ -3,9 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:snake_online/components/players_list/players_list.dart';
-import 'package:snake_online/controller/engine_master.dart';
 import 'package:snake_online/model/game/game_state.dart';
 
+import '../config.dart';
 import '../controller/engine.dart';
 import '../model/proto/snake.pb.dart';
 
@@ -50,11 +50,10 @@ class GameFieldState extends State<GameField> {
   @override
   void initState() {
     _engine = widget.engine;
-    _engine.setRenderer(this);
     handler = _engine.handlePressedKeyEvent;
     runner = Timer.periodic(Duration(milliseconds: _gameConfig.stateDelayMs), (timer) {
-      _engine.update();
-      _engine.render();
+      var newState = _engine.update();
+      update(newState);
       PlayersListState.current?.updatePlayers(_gameState!.players);
     });
     super.initState();
@@ -150,8 +149,8 @@ class GameFieldState extends State<GameField> {
   final List<String> foodNames = ["potato", "apple", "golden_apple",
   "carrot", "cookie", "chicken", "steak", "cake"];
 
-  double get maxWidth => 900;
-  double get maxHeight => 700;
+  double get maxWidth => Config.pageWidth(context) * 0.65;
+  double get maxHeight => Config.pageHeight(context) * 0.8;
 
   @override
   Widget build(BuildContext context) {

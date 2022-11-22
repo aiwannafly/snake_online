@@ -1,27 +1,18 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 
-import 'package:snake_online/components/game_field.dart';
 import 'package:snake_online/model/game/game_state.dart';
 import 'package:snake_online/model/network/message_handler.dart';
 
+import '../model/network/address.dart';
 import '../model/proto/snake.pb.dart';
 import 'engine.dart';
 
 typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;
 
-class Address {
-  InternetAddress internetAddress;
-  int port;
-
-  Address({required this.internetAddress, required this.port});
-}
-
 class EngineMaster implements Engine {
-  late GameFieldState renderer;
   final GameConfig config;
   late GameStateMutable currentState;
   late final GamePlayer player;
@@ -29,30 +20,34 @@ class EngineMaster implements Engine {
   final List<Snake> removalList = [];
   var movingStarted = false;
   late Timer _timer;
-  static bool _listenJoins = false;
   final Map<Address, GamePlayer> addresses = {};
-
-  @override
-  void setRenderer(GameFieldState renderer) {
-    this.renderer = renderer;
-  }
+  static bool _listenedAlready = false;
+  static late final StreamSubscription<MessageWithSender> _joinSubscription;
+  static late final StreamSubscription<MessageWithSender> _steerSubscription;
 
   EngineMaster({required this.config, required this.player}) {
     currentState = GameStateMutable(config: config);
     currentState.initZeroState(player);
     playerSnake = currentState.snakes[0];
     startSendAnnouncements();
-    listenJoins();
-    listenSteers();
+    if (_listenedAlready) {
+      _joinSubscription.resume();
+      _steerSubscription.resume();
+      return;
+    }
+    _joinSubscription = listenJoins();
+    _steerSubscription = listenSteers();
+    _listenedAlready = true;
   }
 
-  void listenSteers() {
-    MessageHandler().steerMessages.stream.listen((event) {
+  StreamSubscription<MessageWithSender> listenSteers() {
+    return MessageHandler().steerMessages.stream.listen((event) {
       debugPrint('GOT STEER');
       var address = Address(internetAddress: event.address, port: event.port);
       for (MapEntry<Address, GamePlayer> entry in addresses.entries) {
-        if (entry.key.internetAddress.address == address.internetAddress.address
-        && entry.key.port == address.port) {
+        if (entry.key.internetAddress.address ==
+                address.internetAddress.address &&
+            entry.key.port == address.port) {
           var player = entry.value;
           debugPrint('CHANGE DIRECTION FOR THE PLAYER');
           Snake snake = currentState.snakes
@@ -61,19 +56,11 @@ class EngineMaster implements Engine {
           snake.headDirection = event.gameMessage.steer.direction;
         }
       }
-      // if (!addresses.keys.contains(address)) {
-      //   debugPrint('I DONT KNOW THE PLAYER');
-      //   return;
-      // }
     });
   }
 
-  void listenJoins() {
-    if (_listenJoins) {
-      return;
-    }
-    _listenJoins = true;
-    MessageHandler().joinMessages.stream.listen((event) {
+  StreamSubscription<MessageWithSender> listenJoins() {
+    return MessageHandler().joinMessages.stream.listen((event) {
       debugPrint('GOT JOIN');
       NodeRole role = event.gameMessage.join.requestedRole;
       int newId = currentState.players.length + 1;
@@ -99,7 +86,8 @@ class EngineMaster implements Engine {
           port: event.port,
           msgSeq: event.gameMessage.msgSeq,
           receiverId: newId);
-      addresses[Address(internetAddress: event.address, port: event.port)] = joinedPlayer;
+      addresses[Address(internetAddress: event.address, port: event.port)] =
+          joinedPlayer;
     });
   }
 
@@ -135,7 +123,7 @@ class EngineMaster implements Engine {
   }
 
   @override
-  void update() {
+  GameStateMutable update() {
     int foodEatenCount = 0;
     removalList.clear();
     for (Snake snake in currentState.snakes) {
@@ -191,6 +179,7 @@ class EngineMaster implements Engine {
     currentState.placeFoods(foodEatenCount);
     currentState.stateOrder++;
     sendCurrentState();
+    return currentState;
   }
 
   void sendCurrentState() {
@@ -208,6 +197,8 @@ class EngineMaster implements Engine {
 
   @override
   void shutdown() {
+    _joinSubscription.pause();
+    _steerSubscription.pause();
     _timer.cancel();
   }
 
@@ -221,10 +212,5 @@ class EngineMaster implements Engine {
             gameName: "${player.name}'s game")
       ]);
     });
-  }
-
-  @override
-  void render() {
-    renderer.update(currentState);
   }
 }

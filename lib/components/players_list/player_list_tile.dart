@@ -19,7 +19,7 @@ class PlayerListTile extends StatelessWidget {
         ),
         color: Colors.blueGrey.shade800,
       ),
-      width: 400,
+      width: Config.pageWidth(context) / 4,
       padding: const EdgeInsets.all(Config.padding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
