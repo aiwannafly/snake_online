@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:snake_online/components/players_list/player_list_tile.dart';
 
 import '../../config.dart';
-import '../../snake.pb.dart';
+import '../../proto/snake.pb.dart';
 
 class PlayersList extends StatefulWidget {
   const PlayersList({super.key});

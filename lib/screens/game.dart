@@ -5,7 +5,7 @@ import 'package:snake_online/screens/main_menu.dart';
 
 import '../components/button.dart';
 import '../config.dart';
-import '../snake.pb.dart';
+import '../proto/snake.pb.dart';
 
 class Game extends StatelessWidget {
   Game({super.key});

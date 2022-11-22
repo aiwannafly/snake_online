@@ -8,7 +8,7 @@ import 'package:snake_online/controller/engine_master.dart';
 import 'package:snake_online/model/game/game_state.dart';
 
 import '../controller/engine.dart';
-import '../snake.pb.dart';
+import '../proto/snake.pb.dart';
 
 typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;

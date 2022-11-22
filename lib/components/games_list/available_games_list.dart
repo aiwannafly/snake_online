@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:snake_online/components/games_list/game_list_tile.dart';
 
 import '../../config.dart';
-import '../../snake.pb.dart';
+import '../../proto/snake.pb.dart';
 import '../button.dart';
 
 class GamesList extends StatefulWidget {

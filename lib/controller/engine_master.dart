@@ -2,8 +2,9 @@ import 'dart:html';
 
 import 'package:snake_online/components/game_field.dart';
 import 'package:snake_online/model/game/game_state.dart';
+import 'package:snake_online/model/network/message_handler.dart';
 
-import '../snake.pb.dart';
+import '../proto/snake.pb.dart';
 import 'engine.dart';
 
 typedef Snake = GameState_Snake;
@@ -58,6 +59,22 @@ class EngineMaster implements Engine {
 
   @override
   void update() {
+    if (player.role == NodeRole.MASTER) {
+      updateMaster();
+    } else if (player.role == NodeRole.NORMAL) {}
+  }
+
+  void updateNormal() {}
+
+  void updateMaster() {
+    MessageHandler().sendAnnouncementMulticast(games: [
+      GameAnnouncement(
+        players: GamePlayers(players: currentState.players),
+        config: config,
+        canJoin: true,
+        gameName: "${player.name}'s game"
+      )
+    ]);
     int foodEatenCount = 0;
     removalList.clear();
     for (Snake snake in currentState.snakes) {
@@ -66,16 +83,20 @@ class EngineMaster implements Engine {
       Coord newHead = Coord(x: 0, y: 0);
       switch (snake.headDirection) {
         case Direction.LEFT:
-          newHead = Coord(x: GameStateMutable.tor(head.x - 1, config.width), y: head.y);
+          newHead = Coord(
+              x: GameStateMutable.tor(head.x - 1, config.width), y: head.y);
           break;
         case Direction.RIGHT:
-          newHead = Coord(x: GameStateMutable.tor(head.x + 1, config.width), y: head.y);
+          newHead = Coord(
+              x: GameStateMutable.tor(head.x + 1, config.width), y: head.y);
           break;
         case Direction.DOWN:
-          newHead = Coord(x: head.x, y: GameStateMutable.tor(head.y + 1, config.height));
+          newHead = Coord(
+              x: head.x, y: GameStateMutable.tor(head.y + 1, config.height));
           break;
         case Direction.UP:
-          newHead = Coord(x: head.x, y: GameStateMutable.tor(head.y - 1, config.height));
+          newHead = Coord(
+              x: head.x, y: GameStateMutable.tor(head.y - 1, config.height));
           break;
       }
       bool crossedSnake = false;

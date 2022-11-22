@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config.dart';
-import '../../snake.pb.dart';
+import '../../proto/snake.pb.dart';
 
 class GameListTile extends StatefulWidget {
   const GameListTile({super.key, required this.gameAnnouncement,

@@ -1,27 +1,146 @@
 import 'dart:io';
-
-import 'package:snake_online/snake.pb.dart';
+import 'package:snake_online/model/network/connection_handler.dart';
+import 'package:snake_online/proto/snake.pb.dart';
+import 'package:fixnum/fixnum.dart';
 
 class MessageWithSender {
   InternetAddress address;
   int port;
   GameMessage gameMessage;
 
-  MessageWithSender({required this.address,
-  required this.port, required this.gameMessage});
+  MessageWithSender(
+      {required this.address, required this.port, required this.gameMessage});
 }
 
 class MessageHandler {
   final List<MessageWithSender> discoverMessages = [];
-  final List<MessageWithSender> messageWithSenders = [];
+  final List<MessageWithSender> joinMessages = [];
   final List<MessageWithSender> receivedStates = [];
-  final List<MessageWithSender> roleChangeMsgs = [];
+  final List<MessageWithSender> roleChangeMessages = [];
   final List<MessageWithSender> steerMessages = [];
   final List<MessageWithSender> errorMessages = [];
   final List<MessageWithSender> ackMessages = [];
-  int _msgCounter = 0;
+  Int64 _msgCounter = Int64(0);
+  late final ConnectionHandler connectionHandler =
+      ConnectionHandler(handleMessage: handleMessage);
 
-  int get msgSeq => _msgCounter++;
+  static final MessageHandler _singleton = MessageHandler._internal();
+
+  factory MessageHandler() => _singleton;
+
+  MessageHandler._internal();
+
+  Int64 get msgSeq => _msgCounter++;
+
+  void initAndStartListening() async {
+    await connectionHandler.initialize();
+    connectionHandler.listen();
+  }
+
+  void sendPing({
+    required InternetAddress address,
+    required int port,
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        ping: GameMessage_PingMsg());
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendSteer({
+    required InternetAddress address,
+    required int port,
+    required Direction direction
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        steer: GameMessage_SteerMsg(direction: direction));
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendAck({
+    required InternetAddress address,
+    required int port,
+    required Int64 msgSeq
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        ack: GameMessage_AckMsg());
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendState({
+    required InternetAddress address,
+    required int port,
+    required GameState gameState
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        state: GameMessage_StateMsg(state: gameState));
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendAnnouncementMulticast({
+    required List<GameAnnouncement> games
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        announcement: GameMessage_AnnouncementMsg(games: games));
+    connectionHandler.multicastSend(message.writeToBuffer());
+  }
+
+  void sendAnnouncement({
+    required InternetAddress address,
+    required int port,
+    required List<GameAnnouncement> games
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        announcement: GameMessage_AnnouncementMsg(games: games));
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendJoin({
+    required InternetAddress address,
+    required int port,
+    required String gameName,
+    required String playerName,
+    required NodeRole requestedRole,
+    PlayerType playerType = PlayerType.HUMAN,
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+    join: GameMessage_JoinMsg(
+      playerType: playerType,
+      gameName: gameName,
+      playerName: playerName,
+      requestedRole: requestedRole
+    ));
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendError({
+    required InternetAddress address,
+    required int port,
+    required String errorMsg
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        error: GameMessage_ErrorMsg(errorMessage: errorMsg));
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendRoleChange({
+    required InternetAddress address,
+    required int port,
+    required NodeRole senderRole,
+    required NodeRole receiverRole
+  }) {
+    var message = GameMessage(msgSeq: msgSeq,
+        roleChange: GameMessage_RoleChangeMsg(
+            senderRole: senderRole,
+            receiverRole: receiverRole
+        ));
+    connectionHandler.send(message.writeToBuffer(), address, port);
+  }
+
+  void sendDiscover() {
+    var message = GameMessage(msgSeq: msgSeq,
+        discover: GameMessage_DiscoverMsg());
+    connectionHandler.multicastSend(message.writeToBuffer());
+  }
 
   void handleMessage(Datagram packet) {
     var message = GameMessage.fromBuffer(packet.data);
@@ -30,11 +149,11 @@ class MessageHandler {
     if (message.hasDiscover()) {
       discoverMessages.add(messageWithSender);
     } else if (message.hasJoin()) {
-      messageWithSenders.add(messageWithSender);
+      joinMessages.add(messageWithSender);
     } else if (message.hasState()) {
       receivedStates.add(messageWithSender);
     } else if (message.hasRoleChange()) {
-      roleChangeMsgs.add(messageWithSender);
+      roleChangeMessages.add(messageWithSender);
     } else if (message.hasSteer()) {
       steerMessages.add(messageWithSender);
     } else if (message.hasError()) {
