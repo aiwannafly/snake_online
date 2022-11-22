@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config.dart';
-import '../../proto/snake.pb.dart';
+import '../../model/proto/snake.pb.dart';
 
 class PlayerListTile extends StatelessWidget {
   const PlayerListTile({super.key, required this.gamePlayer});

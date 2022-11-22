@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:snake_online/components/games_list/available_games_list.dart';
 import 'package:snake_online/model/network/connection_handler.dart';
-import 'package:snake_online/proto/snake.pb.dart';
+import 'package:snake_online/model/proto/snake.pb.dart';
 import 'package:fixnum/fixnum.dart';
 
 class MessageWithSender {
@@ -20,6 +22,7 @@ class MessageHandler {
   final List<MessageWithSender> steerMessages = [];
   final List<MessageWithSender> errorMessages = [];
   final List<MessageWithSender> ackMessages = [];
+  final StreamController<MessageWithSender> announcementsMessages = StreamController();
   Int64 _msgCounter = Int64(0);
   late final ConnectionHandler connectionHandler =
       ConnectionHandler(handleMessage: handleMessage);
@@ -143,10 +146,15 @@ class MessageHandler {
   }
 
   void handleMessage(Datagram packet) {
+    print('got message');
     var message = GameMessage.fromBuffer(packet.data);
     var messageWithSender = MessageWithSender(
         address: packet.address, port: packet.port, gameMessage: message);
-    if (message.hasDiscover()) {
+    if (message.hasAnnouncement()) {
+      print('(announcement)');
+      // GamesListState.current?.updatePlayers(message.announcement.games);
+      announcementsMessages.add(messageWithSender);
+    } else if (message.hasDiscover()) {
       discoverMessages.add(messageWithSender);
     } else if (message.hasJoin()) {
       joinMessages.add(messageWithSender);

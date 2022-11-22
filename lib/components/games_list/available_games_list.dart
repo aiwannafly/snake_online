@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:snake_online/components/games_list/game_list_tile.dart';
+import 'package:snake_online/model/network/message_handler.dart';
 
 import '../../config.dart';
-import '../../proto/snake.pb.dart';
+import '../../model/proto/snake.pb.dart';
 import '../button.dart';
 
 class GamesList extends StatefulWidget {
@@ -14,23 +15,27 @@ class GamesList extends StatefulWidget {
 
 class GamesListState extends State<GamesList> {
   var _gameIsChosen = false;
-  List<GameAnnouncement> _currentGames = [
-    GameAnnouncement(
-        players: GamePlayers(players : [GamePlayer(name: "Bob", id: 241, role: NodeRole.MASTER)]),
-        config: GameConfig(width: 30, height: 40, foodStatic: 15),
-        gameName: "Some game")
-  ];
-  static GamesListState? current;
+  final Set<GameAnnouncement> _currentGames = {};
+  final Set<String> _gameNames = {};
 
   void updatePlayers(List<GameAnnouncement> players) {
     setState(() {
-      _currentGames = players;
+      _currentGames.addAll(players);
     });
   }
 
   @override
   void initState() {
-    current = this;
+    MessageHandler().announcementsMessages.stream.listen((event) {
+      var games = event.gameMessage.announcement.games;
+      for (GameAnnouncement game in games) {
+        if (_gameNames.contains(game.gameName)) {
+          continue;
+        }
+        _gameNames.add(game.gameName);
+        _currentGames.add(game);
+      }
+    });
     super.initState();
   }
 

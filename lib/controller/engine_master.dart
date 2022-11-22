@@ -1,10 +1,12 @@
-import 'dart:html';
+import 'dart:async';
+
+import 'package:flutter/cupertino.dart';
 
 import 'package:snake_online/components/game_field.dart';
 import 'package:snake_online/model/game/game_state.dart';
 import 'package:snake_online/model/network/message_handler.dart';
 
-import '../proto/snake.pb.dart';
+import '../model/proto/snake.pb.dart';
 import 'engine.dart';
 
 typedef Snake = GameState_Snake;
@@ -18,27 +20,31 @@ class EngineMaster implements Engine {
   late final Snake playerSnake;
   final List<Snake> removalList = [];
   var movingStarted = false;
+  late Timer _timer;
 
   EngineMaster({required this.config, required this.renderer}) {
     player = GamePlayer(name: "aiwannafly", id: 1, role: NodeRole.MASTER);
     currentState = GameStateMutable(config: config);
     currentState.initZeroState(player);
     playerSnake = currentState.snakes[0];
+    if (player.role == NodeRole.MASTER) {
+      startSendAnnouncements();
+    }
   }
 
   @override
-  void handlePressedKeyEvent(KeyboardEvent event) {
-    switch (event.charCode - 32) {
-      case KeyCode.W:
+  void handlePressedKeyEvent(KeyEvent event) {
+    switch (event.character?.toUpperCase()) {
+      case 'W':
         changeDir(Direction.UP);
         break;
-      case KeyCode.A:
+      case 'A':
         changeDir(Direction.LEFT);
         break;
-      case KeyCode.S:
+      case 'S':
         changeDir(Direction.DOWN);
         break;
-      case KeyCode.D:
+      case 'D':
         changeDir(Direction.RIGHT);
         break;
     }
@@ -64,17 +70,26 @@ class EngineMaster implements Engine {
     } else if (player.role == NodeRole.NORMAL) {}
   }
 
+  @override
+  void shutdown() {
+    _timer.cancel();
+  }
+
+  void startSendAnnouncements() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      MessageHandler().sendAnnouncementMulticast(games: [
+        GameAnnouncement(
+            players: GamePlayers(players: currentState.players),
+            config: config,
+            canJoin: true,
+            gameName: "${player.name}'s game")
+      ]);
+    });
+  }
+
   void updateNormal() {}
 
   void updateMaster() {
-    MessageHandler().sendAnnouncementMulticast(games: [
-      GameAnnouncement(
-        players: GamePlayers(players: currentState.players),
-        config: config,
-        canJoin: true,
-        gameName: "${player.name}'s game"
-      )
-    ]);
     int foodEatenCount = 0;
     removalList.clear();
     for (Snake snake in currentState.snakes) {

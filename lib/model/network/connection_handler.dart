@@ -16,10 +16,11 @@ class ConnectionHandler {
   ConnectionHandler({required this.handleMessage});
 
   Future<void> initialize() async {
-    // _group = Util.parseIPv4Address(NetworkConfig.groupAddr);
-
-    _recSocket = await RawDatagramSocket.bind(_group, NetworkConfig.port);
-    _sendSocket = await RawDatagramSocket.bind(_group, NetworkConfig.port);
+    _group = InternetAddress(NetworkConfig.groupAddr);
+    _recSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,
+        NetworkConfig.port, reuseAddress: true);
+    _sendSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,
+        0, reuseAddress: true);
     _recSocket.joinMulticast(_group);
     _initialized = true;
   }
@@ -52,8 +53,8 @@ class ConnectionHandler {
           handleMessage(packet);
         }
       },
-      onError: () {
-        debugPrint('error occurred in listen()');
+      onError: (error) {
+        debugPrint('error occurred in listen(): ${error.toString()}');
       });
     }
   }

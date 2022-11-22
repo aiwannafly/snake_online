@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import '../../proto/snake.pb.dart';
+import '../../model/proto/snake.pb.dart';
 
 typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;

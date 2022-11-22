@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:html';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -8,7 +7,7 @@ import 'package:snake_online/controller/engine_master.dart';
 import 'package:snake_online/model/game/game_state.dart';
 
 import '../controller/engine.dart';
-import '../proto/snake.pb.dart';
+import '../model/proto/snake.pb.dart';
 
 typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;
@@ -23,6 +22,10 @@ class GameField extends StatefulWidget {
 }
 
 class GameFieldState extends State<GameField> {
+  final FocusNode _focusNode = FocusNode();
+  late final Function(KeyEvent) handler;
+  late final Engine _engine;
+
   static const snakeColors = [
     Colors.green,
     Colors.yellow,
@@ -44,11 +47,11 @@ class GameFieldState extends State<GameField> {
 
   @override
   void initState() {
-    Engine engine = EngineMaster(config: _gameConfig, renderer: this);
-    window.onKeyPress.listen(engine.handlePressedKeyEvent);
+    _engine = EngineMaster(config: _gameConfig, renderer: this);
+    handler = _engine.handlePressedKeyEvent;
     runner = Timer.periodic(Duration(milliseconds: _gameConfig.stateDelayMs), (timer) {
-      engine.update();
-      engine.render();
+      _engine.update();
+      _engine.render();
       PlayersListState.current?.updatePlayers(_gameState!.players);
     });
     super.initState();
@@ -56,6 +59,7 @@ class GameFieldState extends State<GameField> {
 
   @override
   void dispose() {
+    _engine.shutdown();
     runner.cancel();
     super.dispose();
   }
@@ -148,12 +152,17 @@ class GameFieldState extends State<GameField> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return KeyboardListener(
+      focusNode: _focusNode,
+      onKeyEvent: handler,
+      autofocus: true,
+      child: Container(
       color: Colors.grey.shade700,
       width: cellSize * _gameConfig.width,
       height: cellSize * _gameConfig.height,
       child: Stack(
-        children: blocks,
+          children: blocks,
+        ),
       ),
     );
   }
