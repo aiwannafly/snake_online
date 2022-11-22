@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:snake_online/components/games_list/game_list_tile.dart';
 import 'package:snake_online/model/network/message_handler.dart';
@@ -14,26 +16,22 @@ class GamesList extends StatefulWidget {
 }
 
 class GamesListState extends State<GamesList> {
-  var _gameIsChosen = false;
+  GameAnnouncement? _chosenGame;
   final Set<GameAnnouncement> _currentGames = {};
-  final Set<String> _gameNames = {};
-
-  void updatePlayers(List<GameAnnouncement> players) {
-    setState(() {
-      _currentGames.addAll(players);
-    });
-  }
+  final Map<String, MessageWithSender> _gameNames = {};
 
   @override
   void initState() {
     MessageHandler().announcementsMessages.stream.listen((event) {
       var games = event.gameMessage.announcement.games;
       for (GameAnnouncement game in games) {
-        if (_gameNames.contains(game.gameName)) {
+        if (_gameNames.keys.contains(game.gameName)) {
           continue;
         }
-        _gameNames.add(game.gameName);
+        _gameNames[game.gameName] = event;
         _currentGames.add(game);
+        setState(() {
+        });
       }
     });
     super.initState();
@@ -57,7 +55,7 @@ class GamesListState extends State<GamesList> {
                 decoration: BoxDecoration(color: Colors.blueGrey.shade700),
                 padding: const EdgeInsets.all(Config.padding),
                 child: const Text(
-                  "Список идущих игр",
+                  "Available games",
                   style: TextStyle(
                       fontFamily: Config.fontFamily,
                       fontSize: 20,
@@ -70,18 +68,28 @@ class GamesListState extends State<GamesList> {
                   gameAnnouncement: e,
                   onTap: (gameAnnouncement) {
                     setState(() {
-                      _gameIsChosen = true;
+                      _chosenGame = gameAnnouncement;
                     });
                   },
-                ))
-                    .toList(),
+                )).toList(),
               ),
             ],
           ),
-          _gameIsChosen
+          _chosenGame != null
               ? Button(
-            text: "Присоединиться",
-            onTap: () {},
+            text: "Join ${_chosenGame!.gameName}",
+            onTap: () {
+              var name = _chosenGame!.gameName;
+              MessageHandler().sendJoin(
+                  address: _gameNames[name]!.address,
+                  port: _gameNames[name]!.port,
+                  gameName: name,
+                  playerName: "winner${Random().nextInt(1000)}",
+                  requestedRole: NodeRole.NORMAL
+              );
+              debugPrint('send join to ${_gameNames[name]!.address.address} :'
+                  '${_gameNames[name]!.port}');
+            },
           )
               : Container()
         ],

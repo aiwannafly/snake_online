@@ -24,8 +24,8 @@ class _ButtonState extends State<Button> {
       onTap: widget.onTap,
       child: AnimatedContainer(
         duration: Config.animationTime,
-        // width: 200,
-        height: 50,
+        // width: 300,
+        height: 50.0,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: !_hovered ? Colors.blueGrey.shade900 :
@@ -40,7 +40,7 @@ class _ButtonState extends State<Button> {
               )
               ]
         ),
-        padding: const EdgeInsets.all(Config.padding),
+        padding: const EdgeInsets.all(Config.padding / 2),
         margin: const EdgeInsets.all(Config.padding),
         child: Text(
           widget.text,

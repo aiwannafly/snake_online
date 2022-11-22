@@ -41,7 +41,7 @@ class PlayersListState extends State<PlayersList> {
             ),
             padding: const EdgeInsets.all(Config.padding),
             child: const Text(
-              "Список игроков",
+              "Players list",
               style: TextStyle(
                   fontFamily: Config.fontFamily,
                   fontSize: 20,

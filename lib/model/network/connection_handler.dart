@@ -6,8 +6,8 @@ import 'dart:io';
 import '../../network_config.dart';
 
 class ConnectionHandler {
-  late final RawDatagramSocket _recSocket;
-  late final RawDatagramSocket _sendSocket;
+  late final RawDatagramSocket _multicastSocket;
+  late final RawDatagramSocket _unicastSocket;
   late final InternetAddress _group;
   bool _isListening = true;
   final Function(Datagram) handleMessage;
@@ -17,11 +17,11 @@ class ConnectionHandler {
 
   Future<void> initialize() async {
     _group = InternetAddress(NetworkConfig.groupAddr);
-    _recSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,
+    _multicastSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,
         NetworkConfig.port, reuseAddress: true);
-    _sendSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,
+    _unicastSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4,
         0, reuseAddress: true);
-    _recSocket.joinMulticast(_group);
+    _multicastSocket.joinMulticast(_group);
     _initialized = true;
   }
 
@@ -32,21 +32,26 @@ class ConnectionHandler {
 
   void send(Uint8List buffer, InternetAddress address, int port) {
     if (!_initialized) throw NotInitializedException();
-    _sendSocket.send(buffer, address, port);
+    _unicastSocket.send(buffer, address, port);
   }
 
   void shutdown() {
     if (!_initialized) throw NotInitializedException();
     _isListening = false;
-    _recSocket.leaveMulticast(_group);
+    _multicastSocket.leaveMulticast(_group);
   }
 
-  void listen() async {
+  void listenAll() async {
+    listen(_multicastSocket);
+    listen(_unicastSocket);
+  }
+
+  void listen(RawDatagramSocket socket) async {
     if (!_initialized) throw NotInitializedException();
     _isListening = true;
     while (_isListening) {
-      _recSocket.listen((event) {
-        Datagram? packet = _recSocket.receive();
+      socket.listen((event) {
+        Datagram? packet = socket.receive();
         if (packet == null) {
           debugPrint("receive() returned null-datagram");
         } else {

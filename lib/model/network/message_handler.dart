@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:snake_online/components/games_list/available_games_list.dart';
 import 'package:snake_online/model/network/connection_handler.dart';
 import 'package:snake_online/model/proto/snake.pb.dart';
 import 'package:fixnum/fixnum.dart';
@@ -16,7 +15,7 @@ class MessageWithSender {
 
 class MessageHandler {
   final List<MessageWithSender> discoverMessages = [];
-  final List<MessageWithSender> joinMessages = [];
+  final StreamController<MessageWithSender> joinMessages = StreamController();
   final List<MessageWithSender> receivedStates = [];
   final List<MessageWithSender> roleChangeMessages = [];
   final List<MessageWithSender> steerMessages = [];
@@ -37,7 +36,7 @@ class MessageHandler {
 
   void initAndStartListening() async {
     await connectionHandler.initialize();
-    connectionHandler.listen();
+    connectionHandler.listenAll();
   }
 
   void sendPing({
@@ -62,10 +61,11 @@ class MessageHandler {
   void sendAck({
     required InternetAddress address,
     required int port,
-    required Int64 msgSeq
+    required Int64 msgSeq,
+    int receiverId = 0
   }) {
     var message = GameMessage(msgSeq: msgSeq,
-        ack: GameMessage_AckMsg());
+        ack: GameMessage_AckMsg(), receiverId: receiverId);
     connectionHandler.send(message.writeToBuffer(), address, port);
   }
 

@@ -46,7 +46,7 @@ class MainMenu extends StatelessWidget {
                     Container(),
                     Container(),
                     Button(
-                        text: "Начать новую игру",
+                        text: "New game",
                         onTap: () {
                           Navigator.of(context).push(
                               MaterialPageRoute(builder: (context) => Game()));

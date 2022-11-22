@@ -12,7 +12,7 @@ import 'engine.dart';
 typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;
 
-class EngineMaster implements Engine {
+class EngineImpl implements Engine {
   final GameFieldState renderer;
   final GameConfig config;
   late GameStateMutable currentState;
@@ -21,14 +21,43 @@ class EngineMaster implements Engine {
   final List<Snake> removalList = [];
   var movingStarted = false;
   late Timer _timer;
+  static bool _listenJoins = false;
 
-  EngineMaster({required this.config, required this.renderer}) {
+  EngineImpl({required this.config, required this.renderer}) {
     player = GamePlayer(name: "aiwannafly", id: 1, role: NodeRole.MASTER);
     currentState = GameStateMutable(config: config);
     currentState.initZeroState(player);
     playerSnake = currentState.snakes[0];
     if (player.role == NodeRole.MASTER) {
       startSendAnnouncements();
+      if (_listenJoins) {
+        return;
+      }
+      _listenJoins = true;
+      MessageHandler().joinMessages.stream.listen((event) {
+        debugPrint('GOT JOIN');
+        NodeRole role = event.gameMessage.join.requestedRole;
+        int newId = currentState.players.length + 1;
+        if (role != NodeRole.VIEWER) {
+          try {
+            Snake snake = currentState.getNewSnake(newId);
+            currentState.snakes.add(snake);
+          } catch (e) {
+            MessageHandler().sendError(
+                address: event.address,
+                port: event.port,
+                errorMsg: "No space available"
+            );
+            return;
+          }
+        }
+        MessageHandler().sendAck(
+            address: event.address,
+            port: event.port,
+            msgSeq: event.gameMessage.msgSeq,
+            receiverId: newId
+        );
+      });
     }
   }
 
@@ -72,6 +101,8 @@ class EngineMaster implements Engine {
 
   @override
   void shutdown() {
+    if (player.role == NodeRole.MASTER) {
+    }
     _timer.cancel();
   }
 
