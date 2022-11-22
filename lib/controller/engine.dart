@@ -1,12 +1,15 @@
 import 'package:flutter/cupertino.dart';
+import 'package:snake_online/components/game_field.dart';
 
 abstract class Engine {
 
-    void handlePressedKeyEvent(KeyEvent event);
+  void setRenderer(GameFieldState renderer);
 
-    void update();
+  void handlePressedKeyEvent(KeyEvent event);
 
-    void shutdown();
+  void update();
 
-    void render();
+  void shutdown();
+
+  void render();
 }

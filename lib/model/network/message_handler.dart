@@ -16,11 +16,11 @@ class MessageWithSender {
 class MessageHandler {
   final List<MessageWithSender> discoverMessages = [];
   final StreamController<MessageWithSender> joinMessages = StreamController();
-  final List<MessageWithSender> receivedStates = [];
-  final List<MessageWithSender> roleChangeMessages = [];
-  final List<MessageWithSender> steerMessages = [];
-  final List<MessageWithSender> errorMessages = [];
-  final List<MessageWithSender> ackMessages = [];
+  final StreamController<MessageWithSender> receivedStates = StreamController();
+  final StreamController<MessageWithSender> roleChangeMessages = StreamController();
+  final StreamController<MessageWithSender> steerMessages = StreamController();
+  final StreamController<MessageWithSender> errorMessages = StreamController();
+  final StreamController<MessageWithSender> ackMessages = StreamController();
   final StreamController<MessageWithSender> announcementsMessages = StreamController();
   Int64 _msgCounter = Int64(0);
   late final ConnectionHandler connectionHandler =
@@ -146,13 +146,10 @@ class MessageHandler {
   }
 
   void handleMessage(Datagram packet) {
-    print('got message');
     var message = GameMessage.fromBuffer(packet.data);
     var messageWithSender = MessageWithSender(
         address: packet.address, port: packet.port, gameMessage: message);
     if (message.hasAnnouncement()) {
-      print('(announcement)');
-      // GamesListState.current?.updatePlayers(message.announcement.games);
       announcementsMessages.add(messageWithSender);
     } else if (message.hasDiscover()) {
       discoverMessages.add(messageWithSender);

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 
@@ -12,8 +13,15 @@ import 'engine.dart';
 typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;
 
-class EngineImpl implements Engine {
-  final GameFieldState renderer;
+class Address {
+  InternetAddress internetAddress;
+  int port;
+
+  Address({required this.internetAddress, required this.port});
+}
+
+class EngineMaster implements Engine {
+  late GameFieldState renderer;
   final GameConfig config;
   late GameStateMutable currentState;
   late final GamePlayer player;
@@ -22,43 +30,77 @@ class EngineImpl implements Engine {
   var movingStarted = false;
   late Timer _timer;
   static bool _listenJoins = false;
+  final Map<Address, GamePlayer> addresses = {};
 
-  EngineImpl({required this.config, required this.renderer}) {
-    player = GamePlayer(name: "aiwannafly", id: 1, role: NodeRole.MASTER);
+  @override
+  void setRenderer(GameFieldState renderer) {
+    this.renderer = renderer;
+  }
+
+  EngineMaster({required this.config, required this.player}) {
     currentState = GameStateMutable(config: config);
     currentState.initZeroState(player);
     playerSnake = currentState.snakes[0];
-    if (player.role == NodeRole.MASTER) {
-      startSendAnnouncements();
-      if (_listenJoins) {
-        return;
-      }
-      _listenJoins = true;
-      MessageHandler().joinMessages.stream.listen((event) {
-        debugPrint('GOT JOIN');
-        NodeRole role = event.gameMessage.join.requestedRole;
-        int newId = currentState.players.length + 1;
-        if (role != NodeRole.VIEWER) {
-          try {
-            Snake snake = currentState.getNewSnake(newId);
-            currentState.snakes.add(snake);
-          } catch (e) {
-            MessageHandler().sendError(
-                address: event.address,
-                port: event.port,
-                errorMsg: "No space available"
-            );
-            return;
-          }
+    startSendAnnouncements();
+    listenJoins();
+    listenSteers();
+  }
+
+  void listenSteers() {
+    MessageHandler().steerMessages.stream.listen((event) {
+      debugPrint('GOT STEER');
+      var address = Address(internetAddress: event.address, port: event.port);
+      for (MapEntry<Address, GamePlayer> entry in addresses.entries) {
+        if (entry.key.internetAddress.address == address.internetAddress.address
+        && entry.key.port == address.port) {
+          var player = entry.value;
+          debugPrint('CHANGE DIRECTION FOR THE PLAYER');
+          Snake snake = currentState.snakes
+              .where((element) => element.playerId == player.id)
+              .first;
+          snake.headDirection = event.gameMessage.steer.direction;
         }
-        MessageHandler().sendAck(
-            address: event.address,
-            port: event.port,
-            msgSeq: event.gameMessage.msgSeq,
-            receiverId: newId
-        );
-      });
+      }
+      // if (!addresses.keys.contains(address)) {
+      //   debugPrint('I DONT KNOW THE PLAYER');
+      //   return;
+      // }
+    });
+  }
+
+  void listenJoins() {
+    if (_listenJoins) {
+      return;
     }
+    _listenJoins = true;
+    MessageHandler().joinMessages.stream.listen((event) {
+      debugPrint('GOT JOIN');
+      NodeRole role = event.gameMessage.join.requestedRole;
+      int newId = currentState.players.length + 1;
+      if (role != NodeRole.VIEWER) {
+        try {
+          Snake snake = currentState.getNewSnake(newId);
+          currentState.snakes.add(snake);
+        } catch (e) {
+          MessageHandler().sendError(
+              address: event.address,
+              port: event.port,
+              errorMsg: "No space available");
+          return;
+        }
+      }
+      var joinedPlayer = GamePlayer(
+          id: newId,
+          name: event.gameMessage.join.playerName,
+          type: event.gameMessage.join.playerType);
+      currentState.players.add(joinedPlayer);
+      MessageHandler().sendAck(
+          address: event.address,
+          port: event.port,
+          msgSeq: event.gameMessage.msgSeq,
+          receiverId: newId);
+      addresses[Address(internetAddress: event.address, port: event.port)] = joinedPlayer;
+    });
   }
 
   @override
@@ -94,33 +136,6 @@ class EngineImpl implements Engine {
 
   @override
   void update() {
-    if (player.role == NodeRole.MASTER) {
-      updateMaster();
-    } else if (player.role == NodeRole.NORMAL) {}
-  }
-
-  @override
-  void shutdown() {
-    if (player.role == NodeRole.MASTER) {
-    }
-    _timer.cancel();
-  }
-
-  void startSendAnnouncements() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      MessageHandler().sendAnnouncementMulticast(games: [
-        GameAnnouncement(
-            players: GamePlayers(players: currentState.players),
-            config: config,
-            canJoin: true,
-            gameName: "${player.name}'s game")
-      ]);
-    });
-  }
-
-  void updateNormal() {}
-
-  void updateMaster() {
     int foodEatenCount = 0;
     removalList.clear();
     for (Snake snake in currentState.snakes) {
@@ -174,6 +189,38 @@ class EngineImpl implements Engine {
       currentState.removeSnake(snake);
     }
     currentState.placeFoods(foodEatenCount);
+    currentState.stateOrder++;
+    sendCurrentState();
+  }
+
+  void sendCurrentState() {
+    if (addresses.isEmpty) return;
+    GameState current = GameState(
+        players: GamePlayers(players: currentState.players),
+        foods: currentState.foods,
+        snakes: currentState.snakes,
+        stateOrder: currentState.stateOrder);
+    for (Address a in addresses.keys) {
+      MessageHandler().sendState(
+          address: a.internetAddress, port: a.port, gameState: current);
+    }
+  }
+
+  @override
+  void shutdown() {
+    _timer.cancel();
+  }
+
+  void startSendAnnouncements() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      MessageHandler().sendAnnouncementMulticast(games: [
+        GameAnnouncement(
+            players: GamePlayers(players: currentState.players),
+            config: config,
+            canJoin: true,
+            gameName: "${player.name}'s game")
+      ]);
+    });
   }
 
   @override

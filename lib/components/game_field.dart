@@ -3,7 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:snake_online/components/players_list/players_list.dart';
-import 'package:snake_online/controller/engine_impl.dart';
+import 'package:snake_online/controller/engine_master.dart';
 import 'package:snake_online/model/game/game_state.dart';
 
 import '../controller/engine.dart';
@@ -13,9 +13,11 @@ typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;
 
 class GameField extends StatefulWidget {
-  const GameField({super.key, required this.gameConfig});
+  const GameField({super.key, required this.gameConfig,
+  required this.engine});
 
   final GameConfig gameConfig;
+  final Engine engine;
 
   @override
   State<GameField> createState() => GameFieldState();
@@ -47,7 +49,8 @@ class GameFieldState extends State<GameField> {
 
   @override
   void initState() {
-    _engine = EngineImpl(config: _gameConfig, renderer: this);
+    _engine = widget.engine;
+    _engine.setRenderer(this);
     handler = _engine.handlePressedKeyEvent;
     runner = Timer.periodic(Duration(milliseconds: _gameConfig.stateDelayMs), (timer) {
       _engine.update();

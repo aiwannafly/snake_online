@@ -5,12 +5,14 @@ import 'package:snake_online/screens/main_menu.dart';
 
 import '../components/button.dart';
 import '../config.dart';
+import '../controller/engine.dart';
 import '../model/proto/snake.pb.dart';
 
 class Game extends StatelessWidget {
-  Game({super.key});
-  final GameConfig config = GameConfig(width: 30, height: 20,
-    foodStatic: 30, stateDelayMs: 250);
+  Game({super.key, required this.engine, required this.config});
+
+  final Engine engine;
+  final GameConfig config;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class Game extends StatelessWidget {
           alignment: Alignment.center,
           child: Row(
             children: [
-              GameField(gameConfig: config),
+              GameField(gameConfig: config, engine: engine,),
               Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

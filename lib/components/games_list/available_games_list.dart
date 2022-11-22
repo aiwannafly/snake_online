@@ -2,10 +2,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:snake_online/components/games_list/game_list_tile.dart';
+import 'package:snake_online/controller/engine_normal.dart';
 import 'package:snake_online/model/network/message_handler.dart';
 
 import '../../config.dart';
 import '../../model/proto/snake.pb.dart';
+import '../../screens/game.dart';
 import '../button.dart';
 
 class GamesList extends StatefulWidget {
@@ -19,6 +21,7 @@ class GamesListState extends State<GamesList> {
   GameAnnouncement? _chosenGame;
   final Set<GameAnnouncement> _currentGames = {};
   final Map<String, MessageWithSender> _gameNames = {};
+  final Map<String, GameConfig> _gameConfigs = {};
 
   @override
   void initState() {
@@ -29,6 +32,7 @@ class GamesListState extends State<GamesList> {
           continue;
         }
         _gameNames[game.gameName] = event;
+        _gameConfigs[game.gameName] = game.config;
         _currentGames.add(game);
         setState(() {
         });
@@ -80,15 +84,32 @@ class GamesListState extends State<GamesList> {
             text: "Join ${_chosenGame!.gameName}",
             onTap: () {
               var name = _chosenGame!.gameName;
+              var masterAddress = _gameNames[name]!.address;
+              var masterPort = _gameNames[name]!.port;
               MessageHandler().sendJoin(
-                  address: _gameNames[name]!.address,
-                  port: _gameNames[name]!.port,
+                  address: masterAddress,
+                  port: masterPort,
                   gameName: name,
                   playerName: "winner${Random().nextInt(1000)}",
                   requestedRole: NodeRole.NORMAL
               );
               debugPrint('send join to ${_gameNames[name]!.address.address} :'
                   '${_gameNames[name]!.port}');
+              MessageHandler().ackMessages.stream.listen((event) {
+                if (event.address != masterAddress || event.port != masterPort) return;
+                int playerId = event.gameMessage.receiverId;
+                var config = _gameConfigs[name]!;
+                var engine = EngineNormal(
+                    config: config,
+                    masterAddress: masterAddress,
+                    masterPort: masterPort
+                );
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => Game(
+                      engine: engine,
+                      config: config,
+                    )));
+              });
             },
           )
               : Container()

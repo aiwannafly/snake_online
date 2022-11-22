@@ -9,9 +9,9 @@ class GameStateMutable {
   static const int newSnakeAreaSize = 5;
   static final Random random = Random();
 
-  final List<Coord> foods = [];
-  final List<Snake> snakes = [];
-  final List<GamePlayer> players = [];
+  List<Coord> foods = [];
+  List<Snake> snakes = [];
+  List<GamePlayer> players = [];
   final GameConfig config;
   int stateOrder;
 
