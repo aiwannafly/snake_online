@@ -10,6 +10,8 @@ class PlayerListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Color textColor = gamePlayer.role == NodeRole.VIEWER ?
+        Colors.white70 : Colors.white;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(Config.borderRadius),
@@ -25,16 +27,16 @@ class PlayerListTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(gamePlayer.name,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: Config.fontFamily,
             fontSize: 20,
-            color: Colors.white
+            color: textColor
           ),),
           Text(gamePlayer.score.toString(),
-            style: const TextStyle(
+            style: TextStyle(
                 fontFamily: Config.fontFamily,
                 fontSize: 20,
-                color: Colors.white
+                color: textColor
             ),)
         ],
       ),

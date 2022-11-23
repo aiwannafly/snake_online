@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:snake_online/controller/engine_base.dart';
 
@@ -64,12 +65,20 @@ class EngineMaster extends EngineBase {
     });
   }
 
+  int get maxId {
+    int res = 0;
+    for (GamePlayer player in currentState.players) {
+      res = max(res, player.id);
+    }
+    return res;
+  }
+
   StreamSubscription<MessageWithSender> listenJoins() {
     return MessageHandler().joinMessages.stream.listen((event) {
       print('got join');
       var join = event.gameMessage.join;
       NodeRole role = join.requestedRole;
-      int newId = currentState.players.length + 1;
+      int newId = maxId + 1;
       if (role != NodeRole.VIEWER) {
         try {
           Snake snake = currentState.getNewSnake(newId);

@@ -50,7 +50,7 @@ class ConnectionHandler {
     if (!_initialized) throw NotInitializedException();
     _isListening = true;
     while (_isListening) {
-      socket.listen((event) {
+      socket.asBroadcastStream().listen((event) {
         Datagram? packet = socket.receive();
         if (packet == null) {
           debugPrint("receive() returned null-datagram");
