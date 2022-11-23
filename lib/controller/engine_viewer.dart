@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:snake_online/controller/engine_normal.dart';
+import 'package:snake_online/model/network/message_handler.dart';
 
 class EngineViewer extends EngineNormal {
 
@@ -8,4 +9,7 @@ class EngineViewer extends EngineNormal {
   
   @override
   void handlePressedKeyEvent(KeyEvent event) {}
+
+  @override
+  void handleRoleChange(MessageWithSender messageWithSender) {}
 }

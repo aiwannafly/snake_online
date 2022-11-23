@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:snake_online/controller/engine_base.dart';
 
@@ -23,6 +24,7 @@ class EngineMaster extends EngineBase {
 
   EngineMaster({required super.config, required this.player,
   GameStateMutable? initialState}) {
+    player.role = NodeRole.MASTER;
     if (initialState != null) {
       currentState = initialState;
       for (Snake snake in currentState.snakes) {
@@ -30,6 +32,13 @@ class EngineMaster extends EngineBase {
           playerSnake = snake;
           break;
         }
+      }
+      for (GamePlayer player in currentState.players) {
+        if (player.id == this.player.id) continue;
+        var address = Address(internetAddress: InternetAddress(player.ipAddress),
+            port: player.port);
+        nodes[address] = player;
+        setDisconnectTimer(address);
       }
     } else {
       currentState = GameStateMutable(config: config);
@@ -82,7 +91,9 @@ class EngineMaster extends EngineBase {
           id: newId,
           name: join.playerName,
           type: join.playerType,
-          role: role
+          role: role,
+          ipAddress: event.address.address,
+          port: event.port
       );
       currentState.players.add(joinedPlayer);
       MessageHandler().sendAck(
@@ -92,10 +103,13 @@ class EngineMaster extends EngineBase {
           receiverId: newId
       );
       nodes[address] = joinedPlayer;
-      print(nodes.length);
-      print('added to nodes');
       setDisconnectTimer(address);
     });
+  }
+
+  @override
+  void handleRoleChange(MessageWithSender message) {
+
   }
 
   @override
@@ -105,22 +119,9 @@ class EngineMaster extends EngineBase {
     playerSnake.headDirection = direction;
   }
 
-  void removeDisconnected() {
-    late var toRemove = <GamePlayer>[];
-    for (GamePlayer player in currentState.players) {
-      if (player == this.player) continue;
-      if (!nodes.values.contains(player)) {
-        toRemove.add(player);
-      }
-    }
-    if (toRemove.isEmpty) return;
-    print('remove player');
-    currentState.players.removeWhere((element) => toRemove.contains(element));
-  }
-
   @override
   GameStateMutable update() {
-    removeDisconnected();
+    // removeDisconnected();
     int foodEatenCount = 0;
     removalList.clear();
     for (Snake snake in currentState.snakes) {
@@ -173,7 +174,9 @@ class EngineMaster extends EngineBase {
     for (Snake snake in removalList) {
       for (GamePlayer player in currentState.players) {
         if (player.id == snake.playerId) {
-          player.role = NodeRole.VIEWER;
+          if (player.role != NodeRole.MASTER) {
+            player.role = NodeRole.VIEWER;
+          }
         }
       }
       currentState.removeSnake(snake);

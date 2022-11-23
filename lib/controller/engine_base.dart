@@ -17,9 +17,9 @@ abstract class EngineBase implements Engine {
   final GameConfig config;
   late GameStateMutable currentState;
   final Map<Address, GamePlayer> nodes = {};
-  // keys are ids of players
   final disconnectTimers = HashMap<Address, Timer>();
-  late final disconnectTime = Duration(milliseconds: (config.stateDelayMs * 0.8).ceil());
+  late final disconnectTime = Duration(
+      milliseconds: (config.stateDelayMs * 0.8).ceil());
   late final StreamSubscription<MessageWithSender> _subscriptionKA;
   late Timer _sendPingTimer;
 
@@ -35,12 +35,19 @@ abstract class EngineBase implements Engine {
 
   void handleDisconnect(Address address) {
     debugPrint('${address.internetAddress.address} ${address.port} disconnects');
-    nodes.remove(address);
+    currentState.players.remove(nodes.remove(address));
   }
 
   void setDisconnectTimer(Address address) {
     disconnectTimers[address] = Timer(disconnectTime,
             () => handleDisconnect(address));
+  }
+
+  GamePlayer? get deputy {
+    for (GamePlayer player in currentState.players) {
+      if (player.role == NodeRole.DEPUTY) return player;
+    }
+    return null;
   }
 
   void resetDisconnectTimer(Address address) {
@@ -53,8 +60,17 @@ abstract class EngineBase implements Engine {
 
   StreamSubscription<MessageWithSender> listenPing() {
     return MessageHandler().pingMessages.stream.listen((event) {
-      // print('got ping from ${event.port}');
       resetDisconnectTimer(Address(internetAddress: event.address, port: event.port));
+    });
+  }
+
+  void handleRoleChange(MessageWithSender message);
+
+  StreamSubscription<MessageWithSender> listenRoleChange() {
+    return MessageHandler().roleChangeMessages.stream.listen((event) {
+      var address = Address(internetAddress: event.address, port: event.port);
+      handleRoleChange(event);
+      resetDisconnectTimer(address);
     });
   }
 
