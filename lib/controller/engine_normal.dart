@@ -13,12 +13,17 @@ class EngineNormal extends EngineBase {
   var headDirection = Direction.UP;
   late Address masterAddress;
   static bool _listenedAlready = false;
+  final int playerId;
   late final StreamSubscription<MessageWithSender> _statesSubscription;
 
   EngineNormal(
       {required super.config,
       required InternetAddress masterAddress,
-      required int masterPort}) {
+      required int masterPort,
+      required this.playerId}) {
+    this.masterAddress = Address(
+        internetAddress: masterAddress, port: masterPort);
+    setDisconnectTimer(this.masterAddress);
     currentState = GameStateMutable(config: config, stateOrder: 0);
     if (_listenedAlready) {
       _statesSubscription.resume();
@@ -26,8 +31,12 @@ class EngineNormal extends EngineBase {
     }
     _statesSubscription = listenStates();
     _listenedAlready = true;
-    this.masterAddress = Address(internetAddress: masterAddress, port: masterPort);
-    setDisconnectTimer(this.masterAddress);
+  }
+
+  @override
+  void sendPing() {
+    MessageHandler().sendPing(
+        address: masterAddress.internetAddress, port: masterAddress.port);
   }
 
   StreamSubscription<MessageWithSender> listenStates() {

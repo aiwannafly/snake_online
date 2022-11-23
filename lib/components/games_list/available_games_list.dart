@@ -23,8 +23,8 @@ class GamesListState extends State<GamesList> {
   final Set<GameAnnouncement> _currentGames = {};
   final Map<String, MessageWithSender> _gameNames = {};
   final Map<String, GameConfig> _gameConfigs = {};
-  late StreamSubscription<MessageWithSender> _ackSubscription;
-  late StreamSubscription<MessageWithSender> _errorSubscription;
+  StreamSubscription<MessageWithSender>? _ackSubscription;
+  StreamSubscription<MessageWithSender>? _errorSubscription;
 
   @override
   void initState() {
@@ -90,7 +90,6 @@ class GamesListState extends State<GamesList> {
                     Button(
                         text: "Join as player",
                         onTap: () => _joinToGame(context, NodeRole.NORMAL)),
-                    const SizedBox(height: Config.margin / 2,),
                     Button(
                         text: "Join as viewer",
                         onTap: () => _joinToGame(context, NodeRole.VIEWER)),
@@ -116,12 +115,18 @@ class GamesListState extends State<GamesList> {
         requestedRole: NodeRole.NORMAL);
     debugPrint('send join to ${_gameNames[name]!.address.address} :'
         '${_gameNames[name]!.port}');
-    MessageHandler().ackMessages.stream.listen((event) {
+    if (_ackSubscription != null) {
+      _ackSubscription!.resume();
+      return;
+    }
+    _ackSubscription = MessageHandler().ackMessages.stream.listen((event) {
       if (event.address != masterAddress || event.port != masterPort) return;
       int playerId = event.gameMessage.receiverId;
       var config = _gameConfigs[name]!;
       var engine = EngineNormal(
-          config: config, masterAddress: masterAddress, masterPort: masterPort);
+          config: config, masterAddress: masterAddress, masterPort: masterPort,
+      playerId: playerId);
+      _ackSubscription!.pause();
       Navigator.of(context).push(MaterialPageRoute(
           builder: (context) => Game(
                 engine: engine,

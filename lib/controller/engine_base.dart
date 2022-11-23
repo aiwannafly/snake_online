@@ -21,19 +21,27 @@ abstract class EngineBase implements Engine {
   static final disconnectTimers = HashMap<Address, Timer>();
   late final disconnectTime = Duration(milliseconds: (config.stateDelayMs * 0.8).ceil());
   static late final StreamSubscription<MessageWithSender> _subscriptionKA;
-  static var _listenedKA = false;
+  static var _listenedPingAlready = false;
+  late Timer _sendPingTimer;
 
   EngineBase({required this.config}) {
-    if (_listenedKA) {
+    _sendPingTimer = Timer.periodic(
+        Duration(milliseconds: (disconnectTime.inMilliseconds / 2).ceil()), (timer) {
+      sendPing();
+    });
+    if (_listenedPingAlready) {
       _subscriptionKA.resume();
       return;
     }
-    _listenedKA = true;
+    _listenedPingAlready = true;
     _subscriptionKA = listenPing();
   }
 
+  void sendPing();
+
   void handleDisconnect(Address address) {
     debugPrint('${address.internetAddress.address} disconnects');
+    nodes.remove(address);
   }
 
   void setDisconnectTimer(Address address) {
@@ -83,6 +91,7 @@ abstract class EngineBase implements Engine {
 
   @override
   void shutdown() {
+    _sendPingTimer.cancel();
     _subscriptionKA.pause();
     for (Timer timer in disconnectTimers.values) {
       timer.cancel();

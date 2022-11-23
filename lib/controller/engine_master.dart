@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:snake_online/controller/engine_base.dart';
 
@@ -17,15 +16,27 @@ class EngineMaster extends EngineBase {
   late final Snake playerSnake;
   final List<Snake> removalList = [];
   var movingStarted = false;
+  late Address deputyAddress;
   late Timer _announcementsTimer;
   static bool _listenedAlready = false;
   static late final StreamSubscription<MessageWithSender> _joinSubscription;
   static late final StreamSubscription<MessageWithSender> _steerSubscription;
 
-  EngineMaster({required super.config, required this.player}) {
-    currentState = GameStateMutable(config: config);
-    currentState.initZeroState(player);
-    playerSnake = currentState.snakes[0];
+  EngineMaster({required super.config, required this.player,
+  GameStateMutable? initialState}) {
+    if (initialState != null) {
+      currentState = initialState;
+      for (Snake snake in currentState.snakes) {
+        if (snake.playerId == player.id) {
+          playerSnake = snake;
+          break;
+        }
+      }
+    } else {
+      currentState = GameStateMutable(config: config);
+      currentState.initZeroState(player);
+      playerSnake = currentState.snakes[0];
+    }
     startSendAnnouncements();
     if (_listenedAlready) {
       _joinSubscription.resume();
@@ -53,7 +64,8 @@ class EngineMaster extends EngineBase {
 
   StreamSubscription<MessageWithSender> listenJoins() {
     return MessageHandler().joinMessages.stream.listen((event) {
-      NodeRole role = event.gameMessage.join.requestedRole;
+      var join = event.gameMessage.join;
+      NodeRole role = join.requestedRole;
       int newId = currentState.players.length + 1;
       if (role != NodeRole.VIEWER) {
         try {
@@ -67,17 +79,23 @@ class EngineMaster extends EngineBase {
           return;
         }
       }
+      var address = Address(internetAddress: event.address, port: event.port);
+      if (role == NodeRole.NORMAL && currentState.players.length == 1) {
+        role = NodeRole.DEPUTY;
+        deputyAddress = address;
+      }
       var joinedPlayer = GamePlayer(
           id: newId,
-          name: event.gameMessage.join.playerName,
-          type: event.gameMessage.join.playerType);
+          name: join.playerName,
+          type: join.playerType,
+          role: role
+      );
       currentState.players.add(joinedPlayer);
       MessageHandler().sendAck(
           address: event.address,
           port: event.port,
           msgSeq: event.gameMessage.msgSeq,
           receiverId: newId);
-      var address = Address(internetAddress: event.address, port: event.port);
       nodes[address] = joinedPlayer;
       setDisconnectTimer(address);
     });
@@ -90,8 +108,21 @@ class EngineMaster extends EngineBase {
     playerSnake.headDirection = direction;
   }
 
+  void removeDisconnected() {
+    late var toRemove = <GamePlayer>[];
+    for (GamePlayer player in currentState.players) {
+      if (player == this.player) continue;
+      if (!nodes.values.contains(player)) {
+        toRemove.add(player);
+      }
+    }
+    if (toRemove.isEmpty) return;
+    currentState.players.removeWhere((element) => toRemove.contains(element));
+  }
+
   @override
   GameStateMutable update() {
+    removeDisconnected();
     int foodEatenCount = 0;
     removalList.clear();
     for (Snake snake in currentState.snakes) {
@@ -142,12 +173,25 @@ class EngineMaster extends EngineBase {
       snake.points.insert(0, newHead);
     }
     for (Snake snake in removalList) {
+      for (GamePlayer player in currentState.players) {
+        if (player.id == snake.playerId) {
+          player.role = NodeRole.VIEWER;
+        }
+      }
       currentState.removeSnake(snake);
     }
     currentState.placeFoods(foodEatenCount);
     currentState.stateOrder++;
     sendCurrentState();
     return currentState;
+  }
+
+  @override
+  void sendPing() {
+    for (Address a in nodes.keys) {
+      MessageHandler().sendPing(
+          address: a.internetAddress, port: a.port);
+    }
   }
 
   void sendCurrentState() {
