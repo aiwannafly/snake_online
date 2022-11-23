@@ -15,13 +15,13 @@ class MessageWithSender {
 
 class MessageHandler {
   final List<MessageWithSender> discoverMessages = [];
-  final StreamController<MessageWithSender> joinMessages = StreamController();
-  final StreamController<MessageWithSender> pingMessages = StreamController();
-  final StreamController<MessageWithSender> receivedStates = StreamController();
-  final StreamController<MessageWithSender> roleChangeMessages = StreamController();
-  final StreamController<MessageWithSender> steerMessages = StreamController();
-  final StreamController<MessageWithSender> errorMessages = StreamController();
-  final StreamController<MessageWithSender> ackMessages = StreamController();
+  final StreamController<MessageWithSender> joinMessages = StreamController.broadcast();
+  final StreamController<MessageWithSender> pingMessages = StreamController.broadcast();
+  final StreamController<MessageWithSender> receivedStates = StreamController.broadcast();
+  final StreamController<MessageWithSender> roleChangeMessages = StreamController.broadcast();
+  final StreamController<MessageWithSender> steerMessages = StreamController.broadcast();
+  final StreamController<MessageWithSender> errorMessages = StreamController.broadcast();
+  final StreamController<MessageWithSender> ackMessages = StreamController.broadcast();
   final List<MessageWithSender> announcementsMessages = [];
   Int64 _msgCounter = Int64(0);
   late final ConnectionHandler connectionHandler =
@@ -151,7 +151,6 @@ class MessageHandler {
     var messageWithSender = MessageWithSender(
         address: packet.address, port: packet.port, gameMessage: message);
     if (message.hasAnnouncement()) {
-      print('announcement');
       announcementsMessages.add(messageWithSender);
     } else if (message.hasPing()) {
       pingMessages.add(messageWithSender);

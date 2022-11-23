@@ -123,7 +123,7 @@ class GamesListState extends State<GamesList> {
         port: masterPort,
         gameName: name,
         playerName: "winner${Random().nextInt(1000)}",
-        requestedRole: NodeRole.NORMAL);
+        requestedRole: nodeRole);
     debugPrint('send join to ${_gameNames[name]!.address.address} :'
         '${_gameNames[name]!.port}');
     if (_ackSubscription != null) {
@@ -140,11 +140,13 @@ class GamesListState extends State<GamesList> {
           masterPort: masterPort,
           playerId: playerId);
       _ackSubscription!.pause();
+      _chosenGame = null;
       Navigator.of(context).push(MaterialPageRoute(
           builder: (context) => Game(
                 engine: engine,
                 config: config,
-              )));
+              )
+      ));
     });
   }
 }

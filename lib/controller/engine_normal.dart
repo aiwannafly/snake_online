@@ -12,7 +12,6 @@ class EngineNormal extends EngineBase {
   var prevHeadDirection = Direction.UP;
   var headDirection = Direction.UP;
   late Address masterAddress;
-  static bool _listenedAlready = false;
   final int playerId;
   late final StreamSubscription<MessageWithSender> _statesSubscription;
 
@@ -25,12 +24,7 @@ class EngineNormal extends EngineBase {
         internetAddress: masterAddress, port: masterPort);
     setDisconnectTimer(this.masterAddress);
     currentState = GameStateMutable(config: config, stateOrder: 0);
-    if (_listenedAlready) {
-      _statesSubscription.resume();
-      return;
-    }
     _statesSubscription = listenStates();
-    _listenedAlready = true;
   }
 
   @override
@@ -41,6 +35,7 @@ class EngineNormal extends EngineBase {
 
   StreamSubscription<MessageWithSender> listenStates() {
     return MessageHandler().receivedStates.stream.listen((event) {
+      print('got state');
       GameState recvState = event.gameMessage.state.state;
       if (recvState.stateOrder < currentState.stateOrder) return;
       currentState.stateOrder = recvState.stateOrder;

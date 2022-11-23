@@ -18,10 +18,9 @@ abstract class EngineBase implements Engine {
   late GameStateMutable currentState;
   final Map<Address, GamePlayer> nodes = {};
   // keys are ids of players
-  static final disconnectTimers = HashMap<Address, Timer>();
+  final disconnectTimers = HashMap<Address, Timer>();
   late final disconnectTime = Duration(milliseconds: (config.stateDelayMs * 0.8).ceil());
-  static late final StreamSubscription<MessageWithSender> _subscriptionKA;
-  static var _listenedPingAlready = false;
+  late final StreamSubscription<MessageWithSender> _subscriptionKA;
   late Timer _sendPingTimer;
 
   EngineBase({required this.config}) {
@@ -29,18 +28,13 @@ abstract class EngineBase implements Engine {
         Duration(milliseconds: (disconnectTime.inMilliseconds / 2).ceil()), (timer) {
       sendPing();
     });
-    if (_listenedPingAlready) {
-      _subscriptionKA.resume();
-      return;
-    }
-    _listenedPingAlready = true;
     _subscriptionKA = listenPing();
   }
 
   void sendPing();
 
   void handleDisconnect(Address address) {
-    debugPrint('${address.internetAddress.address} disconnects');
+    debugPrint('${address.internetAddress.address} ${address.port} disconnects');
     nodes.remove(address);
   }
 
@@ -50,14 +44,16 @@ abstract class EngineBase implements Engine {
   }
 
   void resetDisconnectTimer(Address address) {
-    if (!disconnectTimers.containsKey(address)) return;
-    disconnectTimers[address]!.cancel();
+    if (disconnectTimers.containsKey(address)) {
+      disconnectTimers[address]!.cancel();
+    }
     disconnectTimers[address] = Timer(disconnectTime,
             () => handleDisconnect(address));
   }
 
   StreamSubscription<MessageWithSender> listenPing() {
     return MessageHandler().pingMessages.stream.listen((event) {
+      // print('got ping from ${event.port}');
       resetDisconnectTimer(Address(internetAddress: event.address, port: event.port));
     });
   }
@@ -92,7 +88,8 @@ abstract class EngineBase implements Engine {
   @override
   void shutdown() {
     _sendPingTimer.cancel();
-    _subscriptionKA.pause();
+    _subscriptionKA.cancel();
+    nodes.clear();
     for (Timer timer in disconnectTimers.values) {
       timer.cancel();
     }

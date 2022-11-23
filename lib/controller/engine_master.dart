@@ -18,9 +18,8 @@ class EngineMaster extends EngineBase {
   var movingStarted = false;
   late Address deputyAddress;
   late Timer _announcementsTimer;
-  static bool _listenedAlready = false;
-  static late final StreamSubscription<MessageWithSender> _joinSubscription;
-  static late final StreamSubscription<MessageWithSender> _steerSubscription;
+  late final StreamSubscription<MessageWithSender> _joinSubscription;
+  late final StreamSubscription<MessageWithSender> _steerSubscription;
 
   EngineMaster({required super.config, required this.player,
   GameStateMutable? initialState}) {
@@ -38,14 +37,8 @@ class EngineMaster extends EngineBase {
       playerSnake = currentState.snakes[0];
     }
     startSendAnnouncements();
-    if (_listenedAlready) {
-      _joinSubscription.resume();
-      _steerSubscription.resume();
-      return;
-    }
     _joinSubscription = listenJoins();
     _steerSubscription = listenSteers();
-    _listenedAlready = true;
   }
 
   StreamSubscription<MessageWithSender> listenSteers() {
@@ -64,6 +57,7 @@ class EngineMaster extends EngineBase {
 
   StreamSubscription<MessageWithSender> listenJoins() {
     return MessageHandler().joinMessages.stream.listen((event) {
+      print('got join');
       var join = event.gameMessage.join;
       NodeRole role = join.requestedRole;
       int newId = currentState.players.length + 1;
@@ -95,8 +89,11 @@ class EngineMaster extends EngineBase {
           address: event.address,
           port: event.port,
           msgSeq: event.gameMessage.msgSeq,
-          receiverId: newId);
+          receiverId: newId
+      );
       nodes[address] = joinedPlayer;
+      print(nodes.length);
+      print('added to nodes');
       setDisconnectTimer(address);
     });
   }
@@ -117,6 +114,7 @@ class EngineMaster extends EngineBase {
       }
     }
     if (toRemove.isEmpty) return;
+    print('remove player');
     currentState.players.removeWhere((element) => toRemove.contains(element));
   }
 
@@ -217,7 +215,6 @@ class EngineMaster extends EngineBase {
 
   void startSendAnnouncements() {
     _announcementsTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      print('send announcement');
       MessageHandler().sendAnnouncementMulticast(games: [
         GameAnnouncement(
             players: GamePlayers(players: currentState.players),
