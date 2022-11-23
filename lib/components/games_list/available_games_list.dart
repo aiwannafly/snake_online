@@ -34,8 +34,7 @@ class GamesListState extends State<GamesList> {
         _gameNames[game.gameName] = event;
         _gameConfigs[game.gameName] = game.config;
         _currentGames.add(game);
-        setState(() {
-        });
+        setState(() {});
       }
     });
     super.initState();
@@ -71,53 +70,60 @@ class GamesListState extends State<GamesList> {
                 Column(
                   children: _currentGames
                       .map((e) => GameListTile(
-                    gameAnnouncement: e,
-                    onTap: (gameAnnouncement) {
-                      setState(() {
-                        _chosenGame = gameAnnouncement;
-                      });
-                    },
-                  )).toList(),
+                            gameAnnouncement: e,
+                            onTap: (gameAnnouncement) {
+                              setState(() {
+                                _chosenGame = gameAnnouncement;
+                              });
+                            },
+                          ))
+                      .toList(),
                 ),
               ],
             ),
             _chosenGame != null
-                ? Button(
-              text: "Join ${_chosenGame!.gameName}",
-              onTap: () {
-                var name = _chosenGame!.gameName;
-                var masterAddress = _gameNames[name]!.address;
-                var masterPort = _gameNames[name]!.port;
-                MessageHandler().sendJoin(
-                    address: masterAddress,
-                    port: masterPort,
-                    gameName: name,
-                    playerName: "winner${Random().nextInt(1000)}",
-                    requestedRole: NodeRole.NORMAL
-                );
-                debugPrint('send join to ${_gameNames[name]!.address.address} :'
-                    '${_gameNames[name]!.port}');
-                MessageHandler().ackMessages.stream.listen((event) {
-                  if (event.address != masterAddress || event.port != masterPort) return;
-                  int playerId = event.gameMessage.receiverId;
-                  var config = _gameConfigs[name]!;
-                  var engine = EngineNormal(
-                      config: config,
-                      masterAddress: masterAddress,
-                      masterPort: masterPort
-                  );
-                  Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => Game(
-                        engine: engine,
-                        config: config,
-                      )));
-                });
-              },
-            )
+                ? Column(
+                  children: [
+                    Button(
+                        text: "Join as player",
+                        onTap: () => _joinToGame(context, NodeRole.NORMAL)),
+                    const SizedBox(height: Config.margin / 2,),
+                    Button(
+                        text: "Join as viewer",
+                        onTap: () => _joinToGame(context, NodeRole.VIEWER)),
+                  ],
+                )
                 : Container()
           ],
         ),
       ),
     );
+  }
+
+  void _joinToGame(BuildContext context, NodeRole nodeRole) {
+    assert(nodeRole == NodeRole.VIEWER || nodeRole == NodeRole.NORMAL);
+    var name = _chosenGame!.gameName;
+    var masterAddress = _gameNames[name]!.address;
+    var masterPort = _gameNames[name]!.port;
+    MessageHandler().sendJoin(
+        address: masterAddress,
+        port: masterPort,
+        gameName: name,
+        playerName: "winner${Random().nextInt(1000)}",
+        requestedRole: NodeRole.NORMAL);
+    debugPrint('send join to ${_gameNames[name]!.address.address} :'
+        '${_gameNames[name]!.port}');
+    MessageHandler().ackMessages.stream.listen((event) {
+      if (event.address != masterAddress || event.port != masterPort) return;
+      int playerId = event.gameMessage.receiverId;
+      var config = _gameConfigs[name]!;
+      var engine = EngineNormal(
+          config: config, masterAddress: masterAddress, masterPort: masterPort);
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => Game(
+                engine: engine,
+                config: config,
+              )));
+    });
   }
 }

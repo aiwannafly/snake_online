@@ -27,20 +27,10 @@ class GameFieldState extends State<GameField> {
   final FocusNode _focusNode = FocusNode();
   late final Function(KeyEvent) handler;
   late final Engine _engine;
+  final List<String> foodNames = ["potato", "apple", "golden_apple",
+    "carrot", "cookie", "chicken", "steak", "cake"];
 
-  static const snakeColors = [
-    Colors.green,
-    Colors.yellow,
-    Colors.red,
-    Colors.blueAccent
-  ];
-
-  static const foodColors = [
-    Colors.lightGreenAccent,
-    Colors.orange,
-    Colors.redAccent,
-    Colors.white
-  ];
+  final List<String> snakeWools = ["green", "red", "blue"];
 
   late final GameConfig _gameConfig = widget.gameConfig;
   GameStateMutable? _gameState;
@@ -64,14 +54,6 @@ class GameFieldState extends State<GameField> {
     _engine.shutdown();
     runner.cancel();
     super.dispose();
-  }
-
-  Color get foodColor {
-    return foodColors[random.nextInt(foodColors.length)];
-  }
-
-  Color get snakeColor {
-    return snakeColors[random.nextInt(snakeColors.length)];
   }
 
   void update(GameStateMutable newState) {
@@ -120,17 +102,17 @@ class GameFieldState extends State<GameField> {
         res.add(Positioned(
             left: cellSize * snakePoint.x,
             top: cellSize * snakePoint.y,
-            child: snakePointView));
+            child: snakePointView(snake.playerId)));
       }
     }
     return res;
   }
 
-  SizedBox get snakePointView {
+  SizedBox snakePointView(int playerId) {
     return SizedBox(
       height: cellSize,
       width: cellSize,
-      child: Image.asset("assets/images/green_wool.png"),
+      child: Image.asset("assets/images/${snakeColor(playerId)}_wool.png"),
       // color: snakeColor,
     );
   }
@@ -144,10 +126,9 @@ class GameFieldState extends State<GameField> {
     );
   }
 
-  String foodName(int x, int y) => foodNames[(x + y) % foodNames.length];
+  String snakeColor(int playerId) => snakeWools[playerId % snakeWools.length];
 
-  final List<String> foodNames = ["potato", "apple", "golden_apple",
-  "carrot", "cookie", "chicken", "steak", "cake"];
+  String foodName(int x, int y) => foodNames[(x + y) % foodNames.length];
 
   double get maxWidth => Config.pageWidth(context) * 0.65;
   double get maxHeight => Config.pageHeight(context) * 0.8;

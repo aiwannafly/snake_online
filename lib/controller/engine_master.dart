@@ -42,17 +42,16 @@ class EngineMaster implements Engine {
 
   StreamSubscription<MessageWithSender> listenSteers() {
     return MessageHandler().steerMessages.stream.listen((event) {
-      debugPrint('GOT STEER');
       var address = Address(internetAddress: event.address, port: event.port);
       for (MapEntry<Address, GamePlayer> entry in addresses.entries) {
         if (entry.key.internetAddress.address ==
                 address.internetAddress.address &&
             entry.key.port == address.port) {
           var player = entry.value;
-          debugPrint('CHANGE DIRECTION FOR THE PLAYER');
-          Snake snake = currentState.snakes
-              .where((element) => element.playerId == player.id)
-              .first;
+          var snakes = currentState.snakes
+              .where((element) => element.playerId == player.id);
+          if (snakes.isEmpty) continue;
+          var snake = snakes.first;
           snake.headDirection = event.gameMessage.steer.direction;
         }
       }
@@ -61,7 +60,6 @@ class EngineMaster implements Engine {
 
   StreamSubscription<MessageWithSender> listenJoins() {
     return MessageHandler().joinMessages.stream.listen((event) {
-      debugPrint('GOT JOIN');
       NodeRole role = event.gameMessage.join.requestedRole;
       int newId = currentState.players.length + 1;
       if (role != NodeRole.VIEWER) {
