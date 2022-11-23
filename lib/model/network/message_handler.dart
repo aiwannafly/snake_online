@@ -16,6 +16,7 @@ class MessageWithSender {
 class MessageHandler {
   final List<MessageWithSender> discoverMessages = [];
   final StreamController<MessageWithSender> joinMessages = StreamController();
+  final StreamController<MessageWithSender> pingMessages = StreamController();
   final StreamController<MessageWithSender> receivedStates = StreamController();
   final StreamController<MessageWithSender> roleChangeMessages = StreamController();
   final StreamController<MessageWithSender> steerMessages = StreamController();
@@ -151,6 +152,8 @@ class MessageHandler {
         address: packet.address, port: packet.port, gameMessage: message);
     if (message.hasAnnouncement()) {
       announcementsMessages.add(messageWithSender);
+    } else if (message.hasPing()) {
+      pingMessages.add(messageWithSender);
     } else if (message.hasDiscover()) {
       discoverMessages.add(messageWithSender);
     } else if (message.hasJoin()) {

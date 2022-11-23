@@ -1,28 +1,24 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
-import 'package:snake_online/controller/engine.dart';
+import 'package:snake_online/controller/engine_base.dart';
+import 'package:snake_online/model/network/address.dart';
 import 'package:snake_online/model/network/message_handler.dart';
 
 import '../model/game/game_state.dart';
-import '../model/network/address.dart';
-import '../model/network/node_info.dart';
 import '../model/proto/snake.pb.dart';
 
-class EngineNormal implements Engine {
-  final GameConfig config;
-  late final GameStateMutable currentState;
+class EngineNormal extends EngineBase {
   var prevHeadDirection = Direction.UP;
   var headDirection = Direction.UP;
-  InternetAddress masterAddress;
-  int masterPort;
+  late Address masterAddress;
   static bool _listenedAlready = false;
-  final Map<Address, NodeInfo> nodes = {};
   late final StreamSubscription<MessageWithSender> _statesSubscription;
 
-  EngineNormal({required this.config,
-  required this.masterAddress, required this.masterPort}) {
+  EngineNormal(
+      {required super.config,
+      required InternetAddress masterAddress,
+      required int masterPort}) {
     currentState = GameStateMutable(config: config, stateOrder: 0);
     if (_listenedAlready) {
       _statesSubscription.resume();
@@ -30,6 +26,8 @@ class EngineNormal implements Engine {
     }
     _statesSubscription = listenStates();
     _listenedAlready = true;
+    this.masterAddress = Address(internetAddress: masterAddress, port: masterPort);
+    setDisconnectTimer(this.masterAddress);
   }
 
   StreamSubscription<MessageWithSender> listenStates() {
@@ -40,51 +38,26 @@ class EngineNormal implements Engine {
       currentState.snakes = recvState.snakes;
       currentState.players = recvState.players.players;
       currentState.foods = recvState.foods;
+      resetDisconnectTimer(masterAddress);
     });
   }
 
   @override
-  void handlePressedKeyEvent(KeyEvent event) {
-    switch (event.character?.toUpperCase()) {
-      case 'W':
-        changeDir(Direction.UP);
-        break;
-      case 'A':
-        changeDir(Direction.LEFT);
-        break;
-      case 'S':
-        changeDir(Direction.DOWN);
-        break;
-      case 'D':
-        changeDir(Direction.RIGHT);
-        break;
-    }
-  }
-
-  static Direction opposite(Direction dir) {
-    if (dir == Direction.LEFT) return Direction.RIGHT;
-    if (dir == Direction.RIGHT) return Direction.LEFT;
-    if (dir == Direction.UP) return Direction.DOWN;
-    return Direction.UP;
-  }
-
   void changeDir(Direction direction) {
-    if (opposite(direction) == prevHeadDirection) return;
+    if (EngineBase.opposite(direction) == prevHeadDirection) return;
     headDirection = direction;
   }
 
   @override
   void shutdown() {
+    super.shutdown();
     _statesSubscription.pause();
   }
 
   @override
   GameStateMutable update() {
     MessageHandler().sendSteer(
-        address: masterAddress,
-        port: masterPort,
-        direction: headDirection
-    );
+        address: masterAddress.internetAddress, port: masterAddress.port, direction: headDirection);
     prevHeadDirection = headDirection;
     return currentState;
   }

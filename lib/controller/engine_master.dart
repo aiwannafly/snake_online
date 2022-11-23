@@ -1,32 +1,28 @@
 import 'dart:async';
+import 'dart:collection';
 
-import 'package:flutter/cupertino.dart';
+import 'package:snake_online/controller/engine_base.dart';
 
 import 'package:snake_online/model/game/game_state.dart';
 import 'package:snake_online/model/network/message_handler.dart';
-import 'package:snake_online/model/network/node_info.dart';
 
 import '../model/network/address.dart';
 import '../model/proto/snake.pb.dart';
-import 'engine.dart';
 
 typedef Snake = GameState_Snake;
 typedef Coord = GameState_Coord;
 
-class EngineMaster implements Engine {
-  final GameConfig config;
-  late GameStateMutable currentState;
+class EngineMaster extends EngineBase {
   late final GamePlayer player;
   late final Snake playerSnake;
   final List<Snake> removalList = [];
   var movingStarted = false;
-  late Timer _timer;
-  final Map<Address, NodeInfo> nodes = {};
+  late Timer _announcementsTimer;
   static bool _listenedAlready = false;
   static late final StreamSubscription<MessageWithSender> _joinSubscription;
   static late final StreamSubscription<MessageWithSender> _steerSubscription;
 
-  EngineMaster({required this.config, required this.player}) {
+  EngineMaster({required super.config, required this.player}) {
     currentState = GameStateMutable(config: config);
     currentState.initZeroState(player);
     playerSnake = currentState.snakes[0];
@@ -44,19 +40,14 @@ class EngineMaster implements Engine {
   StreamSubscription<MessageWithSender> listenSteers() {
     return MessageHandler().steerMessages.stream.listen((event) {
       var address = Address(internetAddress: event.address, port: event.port);
-      for (MapEntry<Address, NodeInfo> entry in nodes.entries) {
-        if (entry.key.internetAddress.address ==
-                address.internetAddress.address &&
-            entry.key.port == address.port) {
-          var player = entry.value.player;
-          var snakes = currentState.snakes
-              .where((element) => element.playerId == player.id);
-          if (snakes.isEmpty) continue;
-          var snake = snakes.first;
-          snake.headDirection = event.gameMessage.steer.direction;
-          updateLastMsgTime(entry.key);
-        }
-      }
+      var player = nodes[address];
+      if (player == null) return;
+      var snakes = currentState.snakes
+          .where((element) => element.playerId == player.id);
+      if (snakes.isEmpty) return;
+      var snake = snakes.first;
+      snake.headDirection = event.gameMessage.steer.direction;
+      resetDisconnectTimer(address);
     });
   }
 
@@ -86,43 +77,16 @@ class EngineMaster implements Engine {
           port: event.port,
           msgSeq: event.gameMessage.msgSeq,
           receiverId: newId);
-      nodes[Address(internetAddress: event.address, port: event.port)] =
-          NodeInfo(player: joinedPlayer);
+      var address = Address(internetAddress: event.address, port: event.port);
+      nodes[address] = joinedPlayer;
+      setDisconnectTimer(address);
     });
   }
 
-  void updateLastMsgTime(Address address) {
-    nodes[address]?.lastMsgTime = DateTime.now();
-  }
-
   @override
-  void handlePressedKeyEvent(KeyEvent event) {
-    switch (event.character?.toUpperCase()) {
-      case 'W':
-        changeDir(Direction.UP);
-        break;
-      case 'A':
-        changeDir(Direction.LEFT);
-        break;
-      case 'S':
-        changeDir(Direction.DOWN);
-        break;
-      case 'D':
-        changeDir(Direction.RIGHT);
-        break;
-    }
-  }
-
-  static Direction opposite(Direction dir) {
-    if (dir == Direction.LEFT) return Direction.RIGHT;
-    if (dir == Direction.RIGHT) return Direction.LEFT;
-    if (dir == Direction.UP) return Direction.DOWN;
-    return Direction.UP;
-  }
-
   void changeDir(Direction direction) {
     movingStarted = true;
-    if (opposite(direction) == playerSnake.headDirection) return;
+    if (EngineBase.opposite(direction) == playerSnake.headDirection) return;
     playerSnake.headDirection = direction;
   }
 
@@ -201,13 +165,14 @@ class EngineMaster implements Engine {
 
   @override
   void shutdown() {
+    super.shutdown();
     _joinSubscription.pause();
     _steerSubscription.pause();
-    _timer.cancel();
+    _announcementsTimer.cancel();
   }
 
   void startSendAnnouncements() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _announcementsTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       MessageHandler().sendAnnouncementMulticast(games: [
         GameAnnouncement(
             players: GamePlayers(players: currentState.players),
