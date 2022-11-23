@@ -22,7 +22,7 @@ class MessageHandler {
   final StreamController<MessageWithSender> steerMessages = StreamController();
   final StreamController<MessageWithSender> errorMessages = StreamController();
   final StreamController<MessageWithSender> ackMessages = StreamController();
-  final StreamController<MessageWithSender> announcementsMessages = StreamController();
+  final List<MessageWithSender> announcementsMessages = [];
   Int64 _msgCounter = Int64(0);
   late final ConnectionHandler connectionHandler =
       ConnectionHandler(handleMessage: handleMessage);
@@ -151,6 +151,7 @@ class MessageHandler {
     var messageWithSender = MessageWithSender(
         address: packet.address, port: packet.port, gameMessage: message);
     if (message.hasAnnouncement()) {
+      print('announcement');
       announcementsMessages.add(messageWithSender);
     } else if (message.hasPing()) {
       pingMessages.add(messageWithSender);

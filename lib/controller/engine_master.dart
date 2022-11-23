@@ -217,6 +217,7 @@ class EngineMaster extends EngineBase {
 
   void startSendAnnouncements() {
     _announcementsTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      print('send announcement');
       MessageHandler().sendAnnouncementMulticast(games: [
         GameAnnouncement(
             players: GamePlayers(players: currentState.players),

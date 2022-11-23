@@ -25,22 +25,33 @@ class GamesListState extends State<GamesList> {
   final Map<String, GameConfig> _gameConfigs = {};
   StreamSubscription<MessageWithSender>? _ackSubscription;
   StreamSubscription<MessageWithSender>? _errorSubscription;
+  late Timer _checkAnnouncementsTimer;
 
   @override
   void initState() {
-    MessageHandler().announcementsMessages.stream.listen((event) {
-      var games = event.gameMessage.announcement.games;
-      for (GameAnnouncement game in games) {
-        if (_gameNames.keys.contains(game.gameName)) {
-          continue;
+    _checkAnnouncementsTimer =
+        Timer.periodic(const Duration(seconds: 1), (timer) async {
+      _currentGames.clear();
+      var messages = MessageHandler().announcementsMessages;
+      // print(messages.length);
+      for (MessageWithSender message in messages) {
+        var games = message.gameMessage.announcement.games;
+        for (GameAnnouncement game in games) {
+          _gameNames[game.gameName] = message;
+          _gameConfigs[game.gameName] = game.config;
+          _currentGames.add(game);
         }
-        _gameNames[game.gameName] = event;
-        _gameConfigs[game.gameName] = game.config;
-        _currentGames.add(game);
-        setState(() {});
       }
+      MessageHandler().announcementsMessages.clear();
+      setState(() {});
     });
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _checkAnnouncementsTimer.cancel();
+    super.dispose();
   }
 
   @override
@@ -86,15 +97,15 @@ class GamesListState extends State<GamesList> {
             ),
             _chosenGame != null
                 ? Column(
-                  children: [
-                    Button(
-                        text: "Join as player",
-                        onTap: () => _joinToGame(context, NodeRole.NORMAL)),
-                    Button(
-                        text: "Join as viewer",
-                        onTap: () => _joinToGame(context, NodeRole.VIEWER)),
-                  ],
-                )
+                    children: [
+                      Button(
+                          text: "Join as player",
+                          onTap: () => _joinToGame(context, NodeRole.NORMAL)),
+                      Button(
+                          text: "Join as viewer",
+                          onTap: () => _joinToGame(context, NodeRole.VIEWER)),
+                    ],
+                  )
                 : Container()
           ],
         ),
@@ -124,8 +135,10 @@ class GamesListState extends State<GamesList> {
       int playerId = event.gameMessage.receiverId;
       var config = _gameConfigs[name]!;
       var engine = EngineNormal(
-          config: config, masterAddress: masterAddress, masterPort: masterPort,
-      playerId: playerId);
+          config: config,
+          masterAddress: masterAddress,
+          masterPort: masterPort,
+          playerId: playerId);
       _ackSubscription!.pause();
       Navigator.of(context).push(MaterialPageRoute(
           builder: (context) => Game(
