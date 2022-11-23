@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 
 import 'package:snake_online/model/game/game_state.dart';
 import 'package:snake_online/model/network/message_handler.dart';
+import 'package:snake_online/model/network/node_info.dart';
 
 import '../model/network/address.dart';
 import '../model/proto/snake.pb.dart';
@@ -20,7 +21,7 @@ class EngineMaster implements Engine {
   final List<Snake> removalList = [];
   var movingStarted = false;
   late Timer _timer;
-  final Map<Address, GamePlayer> addresses = {};
+  final Map<Address, NodeInfo> nodes = {};
   static bool _listenedAlready = false;
   static late final StreamSubscription<MessageWithSender> _joinSubscription;
   static late final StreamSubscription<MessageWithSender> _steerSubscription;
@@ -43,16 +44,17 @@ class EngineMaster implements Engine {
   StreamSubscription<MessageWithSender> listenSteers() {
     return MessageHandler().steerMessages.stream.listen((event) {
       var address = Address(internetAddress: event.address, port: event.port);
-      for (MapEntry<Address, GamePlayer> entry in addresses.entries) {
+      for (MapEntry<Address, NodeInfo> entry in nodes.entries) {
         if (entry.key.internetAddress.address ==
                 address.internetAddress.address &&
             entry.key.port == address.port) {
-          var player = entry.value;
+          var player = entry.value.player;
           var snakes = currentState.snakes
               .where((element) => element.playerId == player.id);
           if (snakes.isEmpty) continue;
           var snake = snakes.first;
           snake.headDirection = event.gameMessage.steer.direction;
+          updateLastMsgTime(entry.key);
         }
       }
     });
@@ -84,9 +86,13 @@ class EngineMaster implements Engine {
           port: event.port,
           msgSeq: event.gameMessage.msgSeq,
           receiverId: newId);
-      addresses[Address(internetAddress: event.address, port: event.port)] =
-          joinedPlayer;
+      nodes[Address(internetAddress: event.address, port: event.port)] =
+          NodeInfo(player: joinedPlayer);
     });
+  }
+
+  void updateLastMsgTime(Address address) {
+    nodes[address]?.lastMsgTime = DateTime.now();
   }
 
   @override
@@ -181,13 +187,13 @@ class EngineMaster implements Engine {
   }
 
   void sendCurrentState() {
-    if (addresses.isEmpty) return;
+    if (nodes.isEmpty) return;
     GameState current = GameState(
         players: GamePlayers(players: currentState.players),
         foods: currentState.foods,
         snakes: currentState.snakes,
         stateOrder: currentState.stateOrder);
-    for (Address a in addresses.keys) {
+    for (Address a in nodes.keys) {
       MessageHandler().sendState(
           address: a.internetAddress, port: a.port, gameState: current);
     }

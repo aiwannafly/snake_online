@@ -74,8 +74,8 @@ class MainMenu extends StatelessWidget {
   }
 
   void _startNewGame(BuildContext context) {
-    var config = GameConfig(width: 30, height: 20,
-        stateDelayMs: 250, foodStatic: 30);
+    var config = GameConfig(width: 60, height: 40,
+        stateDelayMs: 100, foodStatic: 100);
     var player = GamePlayer(name: "aiwannafly", id: 1, role: NodeRole.MASTER);
     var engine = EngineMaster(config: config, player: player);
     Navigator.of(context).push(

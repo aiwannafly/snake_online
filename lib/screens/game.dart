@@ -34,7 +34,7 @@ class Game extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const PlayersList(),
-                  Button(text: "Выйти", onTap: () {
+                  Button(text: "Quit game", onTap: () {
                     Navigator.of(context).pop();
                   },)
                 ],

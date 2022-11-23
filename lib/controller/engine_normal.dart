@@ -6,6 +6,8 @@ import 'package:snake_online/controller/engine.dart';
 import 'package:snake_online/model/network/message_handler.dart';
 
 import '../model/game/game_state.dart';
+import '../model/network/address.dart';
+import '../model/network/node_info.dart';
 import '../model/proto/snake.pb.dart';
 
 class EngineNormal implements Engine {
@@ -16,6 +18,7 @@ class EngineNormal implements Engine {
   InternetAddress masterAddress;
   int masterPort;
   static bool _listenedAlready = false;
+  final Map<Address, NodeInfo> nodes = {};
   late final StreamSubscription<MessageWithSender> _statesSubscription;
 
   EngineNormal({required this.config,

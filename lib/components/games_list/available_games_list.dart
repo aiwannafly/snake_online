@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -22,6 +23,8 @@ class GamesListState extends State<GamesList> {
   final Set<GameAnnouncement> _currentGames = {};
   final Map<String, MessageWithSender> _gameNames = {};
   final Map<String, GameConfig> _gameConfigs = {};
+  late StreamSubscription<MessageWithSender> _ackSubscription;
+  late StreamSubscription<MessageWithSender> _errorSubscription;
 
   @override
   void initState() {
