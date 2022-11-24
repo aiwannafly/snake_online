@@ -11,5 +11,5 @@ class EngineViewer extends EngineNormal {
   void handlePressedKeyEvent(KeyEvent event) {}
 
   @override
-  void handleRoleChange(MessageWithSender messageWithSender) {}
+  void handleRoleChange(MessageWithSender message) {}
 }

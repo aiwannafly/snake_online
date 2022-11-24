@@ -20,7 +20,7 @@ abstract class EngineBase implements Engine {
   final disconnectTimers = HashMap<Address, Timer>();
   late final disconnectTime = Duration(
       milliseconds: (config.stateDelayMs * 0.8).ceil());
-  late final StreamSubscription<MessageWithSender> _subscriptionKA;
+  late final StreamSubscription<MessageWithSender> _pingSubscription;
   late Timer _sendPingTimer;
 
   EngineBase({required this.config}) {
@@ -28,7 +28,7 @@ abstract class EngineBase implements Engine {
         Duration(milliseconds: (disconnectTime.inMilliseconds / 2).ceil()), (timer) {
       sendPing();
     });
-    _subscriptionKA = listenPing();
+    _pingSubscription = listenPing();
   }
 
   void sendPing();
@@ -38,38 +38,43 @@ abstract class EngineBase implements Engine {
     currentState.players.remove(nodes.remove(address));
   }
 
-  void setDisconnectTimer(Address address) {
+  void setDisconnectTimer(Address address, [int initialDelayMillis = 0]) {
+    if (initialDelayMillis != 0) {
+      disconnectTimers[address] = Timer(
+      Duration(milliseconds: initialDelayMillis + disconnectTime.inMilliseconds),
+              () => handleDisconnect(address));
+      return;
+    }
     disconnectTimers[address] = Timer(disconnectTime,
             () => handleDisconnect(address));
   }
 
   GamePlayer? get deputy {
-    for (GamePlayer player in currentState.players) {
-      if (player.role == NodeRole.DEPUTY) return player;
-    }
-    return null;
+    var vars = currentState.players.where((element) =>
+    element.role == NodeRole.DEPUTY);
+    if (vars.isEmpty) return null;
+    return vars.first;
   }
 
   void resetDisconnectTimer(Address address) {
-    if (disconnectTimers.containsKey(address)) {
-      disconnectTimers[address]!.cancel();
-    }
+    // debugPrint('timer reset');
+    disconnectTimers[address]?.cancel();
     disconnectTimers[address] = Timer(disconnectTime,
             () => handleDisconnect(address));
   }
 
   StreamSubscription<MessageWithSender> listenPing() {
-    return MessageHandler().pingMessages.stream.listen((event) {
-      resetDisconnectTimer(Address(internetAddress: event.address, port: event.port));
+    return MessageHandler().pingMessages.stream.listen((message) {
+      resetDisconnectTimer(Address(internetAddress: message.address, port: message.port));
     });
   }
 
   void handleRoleChange(MessageWithSender message);
 
   StreamSubscription<MessageWithSender> listenRoleChange() {
-    return MessageHandler().roleChangeMessages.stream.listen((event) {
-      var address = Address(internetAddress: event.address, port: event.port);
-      handleRoleChange(event);
+    return MessageHandler().roleChangeMessages.stream.listen((message) {
+      var address = Address(internetAddress: message.address, port: message.port);
+      handleRoleChange(message);
       resetDisconnectTimer(address);
     });
   }
@@ -104,7 +109,7 @@ abstract class EngineBase implements Engine {
   @override
   void shutdown() {
     _sendPingTimer.cancel();
-    _subscriptionKA.cancel();
+    _pingSubscription.cancel();
     nodes.clear();
     for (Timer timer in disconnectTimers.values) {
       timer.cancel();

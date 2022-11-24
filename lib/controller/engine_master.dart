@@ -17,7 +17,6 @@ class EngineMaster extends EngineBase {
   late final GamePlayer player;
   late final Snake playerSnake;
   final List<Snake> removalList = [];
-  var movingStarted = false;
   late Address deputyAddress;
   late Timer _announcementsTimer;
   late final StreamSubscription<MessageWithSender> _joinSubscription;
@@ -112,7 +111,7 @@ class EngineMaster extends EngineBase {
           receiverId: newId
       );
       nodes[address] = joinedPlayer;
-      setDisconnectTimer(address);
+      setDisconnectTimer(address, 1000);
     });
   }
 
@@ -123,7 +122,6 @@ class EngineMaster extends EngineBase {
 
   @override
   void changeDir(Direction direction) {
-    movingStarted = true;
     if (EngineBase.opposite(direction) == playerSnake.headDirection) return;
     playerSnake.headDirection = direction;
   }
@@ -134,7 +132,6 @@ class EngineMaster extends EngineBase {
     int foodEatenCount = 0;
     removalList.clear();
     for (Snake snake in currentState.snakes) {
-      if (snake == playerSnake && !movingStarted) continue;
       Coord head = snake.points[0];
       Coord newHead = Coord(x: 0, y: 0);
       switch (snake.headDirection) {

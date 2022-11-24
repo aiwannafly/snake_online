@@ -63,52 +63,57 @@ class GamesListState extends State<GamesList> {
       margin: const EdgeInsets.all(Config.padding),
       padding: const EdgeInsets.all(Config.padding),
       height: Config.pageHeight(context) * 0.8,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
+      child: Column(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: Config.pageWidth(context) / 4,
-                  decoration: BoxDecoration(color: Colors.blueGrey.shade700),
-                  padding: const EdgeInsets.all(Config.padding),
-                  child: const Text(
-                    "Available games",
-                    style: TextStyle(
-                        fontFamily: Config.fontFamily,
-                        fontSize: 20,
-                        color: Colors.white),
-                  ),
-                ),
                 Column(
-                  children: _currentGames
-                      .map((e) => GameListTile(
-                            gameAnnouncement: e,
-                            onTap: (gameAnnouncement) {
-                              setState(() {
-                                _chosenGame = gameAnnouncement;
-                              });
-                            },
-                          ))
-                      .toList(),
+                  children: [
+                    Container(
+                      width: Config.pageWidth(context) / 4,
+                      decoration:
+                          BoxDecoration(color: Colors.blueGrey.shade700),
+                      padding: const EdgeInsets.all(Config.padding),
+                      child: const Text(
+                        "Available games",
+                        style: TextStyle(
+                            fontFamily: Config.fontFamily,
+                            fontSize: 20,
+                            color: Colors.white),
+                      ),
+                    ),
+                    Column(
+                      children: _currentGames
+                          .map((e) => GameListTile(
+                                gameAnnouncement: e,
+                                onTap: (gameAnnouncement) {
+                                  setState(() {
+                                    _chosenGame = gameAnnouncement;
+                                  });
+                                },
+                              ))
+                          .toList(),
+                    ),
+                  ],
                 ),
               ],
             ),
-            _chosenGame != null
-                ? Column(
-                    children: [
-                      Button(
-                          text: "Join as player",
-                          onTap: () => _joinToGame(context, NodeRole.NORMAL)),
-                      Button(
-                          text: "Join as viewer",
-                          onTap: () => _joinToGame(context, NodeRole.VIEWER)),
-                    ],
-                  )
-                : Container()
-          ],
-        ),
+          ),
+          _chosenGame != null
+              ? Column(
+                  children: [
+                    Button(
+                        text: "Join as player",
+                        onTap: () => _joinToGame(context, NodeRole.NORMAL)),
+                    Button(
+                        text: "Join as viewer",
+                        onTap: () => _joinToGame(context, NodeRole.VIEWER)),
+                  ],
+                )
+              : Container()
+        ],
       ),
     );
   }
@@ -145,8 +150,7 @@ class GamesListState extends State<GamesList> {
           builder: (context) => Game(
                 engine: engine,
                 config: config,
-              )
-      ));
+              )));
     });
   }
 }

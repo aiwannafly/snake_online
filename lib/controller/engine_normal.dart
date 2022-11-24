@@ -16,28 +16,35 @@ class EngineNormal extends EngineBase {
   final int playerId;
   late final StreamSubscription<MessageWithSender> _statesSubscription;
   EngineMaster? _engineMaster;
-  bool _turnedIntoMaster = false;
 
   EngineNormal(
       {required super.config,
       required InternetAddress masterAddress,
       required int masterPort,
       required this.playerId}) {
-    this.masterAddress =
-        Address(internetAddress: masterAddress, port: masterPort);
-    setDisconnectTimer(this.masterAddress);
+    this.masterAddress = Address(
+        internetAddress: masterAddress, port: masterPort);
     currentState = GameStateMutable(config: config, stateOrder: 0);
     _statesSubscription = listenStates();
+    setDisconnectTimer(this.masterAddress, 1000);
   }
 
   @override
   void sendPing() {
+    if (_engineMaster != null) {
+      _engineMaster!.sendPing();
+      return;
+    }
     MessageHandler().sendPing(
         address: masterAddress.internetAddress, port: masterAddress.port);
   }
 
   @override
   void handleDisconnect(Address address) {
+    if (_engineMaster != null) {
+      _engineMaster!.handleDisconnect(address);
+      return;
+    }
     super.handleDisconnect(address);
     var oldMasters = currentState.players
         .where((element) => element.role == NodeRole.MASTER);
@@ -55,7 +62,6 @@ class EngineNormal extends EngineBase {
           shutdown();
           _engineMaster = EngineMaster(
               config: config, player: player, initialState: currentState);
-          _turnedIntoMaster = true;
         }
       }
     }
@@ -65,16 +71,16 @@ class EngineNormal extends EngineBase {
     GamePlayer deputyPlayer = deputy!;
     masterAddress = Address(
         internetAddress: InternetAddress(deputyPlayer.ipAddress),
-        port: deputyPlayer.port);
+        port: deputyPlayer.port
+    );
   }
 
   void sendNewMasterNotify() {
-    bool setNewDeputy = false;
+    bool newDeputyChosen = false;
     for (GamePlayer player in currentState.players) {
-      print(player.name);
       if (player.id == playerId) continue;
-      if (player.role == NodeRole.NORMAL && !setNewDeputy) {
-        setNewDeputy = true;
+      if (player.role == NodeRole.NORMAL && !newDeputyChosen) {
+        newDeputyChosen = true;
         player.role = NodeRole.DEPUTY;
       }
       MessageHandler().sendRoleChange(
@@ -86,21 +92,21 @@ class EngineNormal extends EngineBase {
   }
 
   StreamSubscription<MessageWithSender> listenStates() {
-    return MessageHandler().receivedStates.stream.listen((event) {
-      GameState receivedState = event.gameMessage.state.state;
+    return MessageHandler().receivedStates.stream.listen((message) {
+      GameState receivedState = message.gameMessage.state.state;
       if (receivedState.stateOrder < currentState.stateOrder) return;
       currentState.stateOrder = receivedState.stateOrder;
       currentState.snakes = receivedState.snakes;
       currentState.players = receivedState.players.players;
       currentState.foods = receivedState.foods;
       resetDisconnectTimer(
-          Address(internetAddress: event.address, port: event.port));
+          Address(internetAddress: message.address, port: message.port));
     });
   }
 
   @override
   void changeDir(Direction direction) {
-    if (_turnedIntoMaster) {
+    if (_engineMaster != null) {
       _engineMaster!.changeDir(direction);
       return;
     }
@@ -110,6 +116,10 @@ class EngineNormal extends EngineBase {
 
   @override
   void handleRoleChange(MessageWithSender message) {
+    if (_engineMaster != null) {
+      _engineMaster!.handleRoleChange(message);
+      return;
+    }
     var senderRole = message.gameMessage.roleChange.senderRole;
     var receiverRole = message.gameMessage.roleChange.receiverRole;
     if (senderRole == NodeRole.MASTER) {
@@ -120,7 +130,7 @@ class EngineNormal extends EngineBase {
 
   @override
   void shutdown() {
-    if (_turnedIntoMaster) {
+    if (_engineMaster != null) {
       _engineMaster!.shutdown();
       return;
     }
@@ -130,7 +140,7 @@ class EngineNormal extends EngineBase {
 
   @override
   GameStateMutable update() {
-    if (_turnedIntoMaster) {
+    if (_engineMaster != null) {
       return _engineMaster!.update();
     }
     MessageHandler().sendSteer(
