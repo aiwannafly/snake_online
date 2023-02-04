@@ -1,5 +1,4 @@
 # Snake Online
-
 It is a simple snake online game implemented with use of the `Flutter` framework and `Dart` language,
 which uses **UDP** unicast and multicast messages for communicating between players.
 
