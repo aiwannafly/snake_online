@@ -1,16 +1,9 @@
-# snake_online
+# Snake Online
 
-A new Flutter project.
+It is a simple snake online game implemented with use of the `Flutter` framework and `Dart` language,
+which uses **UDP** unicast and multicast messages for communicating between players.
 
-## Getting Started
+The rules and the game protocol are described well here: https://gitlab.ccfit.nsu.ru/vadipp/04_snakes_task.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+[![snake1.png](https://i.postimg.cc/Y97CPWtt/snake1.png)](https://postimg.cc/cKDWg6Kz)
+[![snake2.png](https://i.postimg.cc/6Qgm6r8N/snake2.png)](https://postimg.cc/sBPcwZPn)
